@@ -3,1137 +3,592 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist Produksi Pameran by RIMPANG DIGITAL KREATIF</title>
+    <title>Rimpang Digital Kreatif - Checklist Produksi & Pemasangan</title>
     
-    <!-- Tailwind CSS untuk Styling -->
+    <!-- Tailwind CSS for rapid, responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FontAwesome untuk Ikon -->
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Ekspor Libraries -->
+    <!-- html2canvas for JPG Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* Zoom Modal Image Container */
-        #zoom-image-container {
-            cursor: grab;
-            transition: transform 0.1s ease-out;
-            transform-origin: center center;
-        }
-        #zoom-image-container:active {
-            cursor: grabbing;
+            background-color: #f1f5f9; /* Tailwind slate-100 */
         }
 
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
+        /* Styling for editable content to look like normal text until focused */
+        [contenteditable="true"] {
+            outline: none;
+            transition: all 0.2s ease-in-out;
+            border-radius: 4px;
+            padding: 2px 4px;
+            border: 1px solid transparent;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Print Styles: Membersihkan UI berlebih saat dicetak */
+        [contenteditable="true"]:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-color: #cbd5e1;
+        }
+
+        [contenteditable="true"]:focus {
+            background-color: #fef08a; /* Yellow highlight when editing */
+            border-color: #eab308;
+            box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.2);
+        }
+
+        /* Print and Export Specific Styles */
         @media print {
-            body { background-color: #fff; }
-            header, #controls-area, .no-print, #toastContainer, #formModal, #zoomModal { display: none !important; }
-            main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-            .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 1rem !important; }
-            .bg-white { border: 1px solid #e2e8f0 !important; box-shadow: none !important; page-break-inside: avoid; }
-            #artworkGrid { display: grid !important; }
-            #loadingState, #emptyState { display: none !important; }
-            .h-56 { height: 180px !important; }
+            body {
+                background-color: white !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #main-wrapper {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            .category-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 2rem;
+            }
+            /* Hide empty image containers when printing */
+            .image-container:not(.has-image) {
+                display: none !important;
+            }
+            /* Force colors to print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* Class added dynamically during JPG export to hide non-relevant elements */
+        body.hide-for-export .no-print,
+        body.hide-for-export .delete-col,
+        body.hide-for-export .image-container:not(.has-image) {
+            display: none !important;
+        }
+        
+        /* Ensure table layout doesn't break html2canvas capture on mobile */
+        body.hide-for-export .table-responsive-wrapper {
+            overflow: visible !important;
+        }
+        
+        body.hide-for-export #export-area {
+             width: 1000px !important; /* Force a standard desktop width for clean JPG export */
+             margin: 0 auto;
         }
     </style>
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="text-slate-800 pb-20">
 
-    <!-- Wrapper khusus ekspor JPG agar Header ikut ter-capture -->
-    <div id="export-container" class="flex flex-col min-h-screen bg-[#f8fafc]">
+    <!-- Action Toolbar (Fixed Top) -->
+    <div class="action-bar fixed top-0 left-0 w-full bg-slate-900 text-white shadow-xl p-3 flex flex-wrap gap-2 sm:gap-4 justify-center z-50 no-print items-center">
+        <div class="font-bold text-lg mr-2 sm:mr-4 text-emerald-400 hidden md:block">
+            <i class="fas fa-leaf mr-2"></i>Rimpang Tools
+        </div>
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+            <i class="fas fa-print mr-2"></i> Ekspor Print (Bisa save PDF)
+        </button>
+        <button onclick="exportToJPG()" id="btn-jpg" class="bg-purple-600 hover:bg-purple-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+            <i class="fas fa-image mr-2"></i> Ekspor JPG
+        </button>
+        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+            <i class="fas fa-file-excel mr-2"></i> Ekspor Spreadsheet
+        </button>
+        <button onclick="resetData()" class="bg-red-600 hover:bg-red-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm md:ml-auto">
+            <i class="fas fa-sync-alt mr-2"></i> Reset Template
+        </button>
+    </div>
 
-    <!-- Header -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-xl font-bold shadow-sm">
-                    R
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold leading-tight">Checklist Produksi Pameran</h1>
-                    <p class="text-xs text-blue-300 font-medium tracking-wider">Data offline setiap device komputer/smartphone berbeda, share ekspor file untuk sinkronisasi.</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-2 export-hide">
-                <!-- Export Menu -->
-                <button onclick="exportPrint()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Print Data">
-                    <i class="fa-solid fa-print"></i> <span class="hidden md:inline">Print</span>
-                </button>
-                <button onclick="exportJPG()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Export JPG">
-                    <i class="fa-solid fa-file-image"></i> <span class="hidden md:inline">JPG</span>
-                </button>
-                <button onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Export Excel">
-                    <i class="fa-solid fa-file-excel"></i> <span class="hidden md:inline">Excel</span>
-                </button>
+    <!-- Main Content Area -->
+    <div id="main-wrapper" class="mt-32 md:mt-24 max-w-5xl mx-auto shadow-2xl relative bg-white">
+        <!-- This is the specific area that will be captured for JPG and Print -->
+        <div id="export-area" class="p-6 md:p-12 min-h-screen">
+            <!-- Dynamic Content will be injected here via JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Default Template matching the 3D model reference
+        function generateRow(desc = "Pekerjaan baru...", qty = "1", note = "") {
+            return `
+            <tr class="task-row hover:bg-slate-50 transition-colors group">
+                <td class="border border-slate-300 p-2 text-center align-middle">
+                    <div class="flex items-center justify-center h-full">
+                        <input type="checkbox" class="task-check w-6 h-6 cursor-pointer accent-slate-800 rounded">
+                    </div>
+                </td>
+                <td class="border border-slate-300 p-2 align-top"><div contenteditable="true" class="min-h-[1.5em] w-full">${desc}</div></td>
+                <td class="border border-slate-300 p-2 text-center align-top"><div contenteditable="true" class="min-h-[1.5em] w-full">${qty}</div></td>
+                <td class="border border-slate-300 p-2 align-top"><div contenteditable="true" class="min-h-[1.5em] w-full text-sm text-slate-600">${note}</div></td>
+                <td class="border border-slate-300 p-1 text-center no-print delete-col align-middle opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="delete-row-btn text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50 transition-colors" title="Hapus Baris ini"><i class="fas fa-times"></i></button>
+                </td>
+            </tr>
+            `;
+        }
+
+        function generateImageBlock(categoryId) {
+            return `
+            <div class="image-container p-4 bg-slate-50 border-x border-slate-300 relative text-center flex flex-col items-center justify-center min-h-[100px]">
+                <input type="file" class="hidden image-upload-input" accept="image/*" data-cat="${categoryId}">
                 
-                <div class="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
-                
-                <!-- Action Buttons -->
-                <button onclick="openFormModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm sm:text-base hidden sm:flex">
-                    <i class="fa-solid fa-plus"></i> Tambah Karya
+                <!-- State: No Image -->
+                <button class="trigger-upload-btn text-slate-400 hover:text-blue-500 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded p-4 w-full md:w-1/2 transition-colors no-print">
+                    <i class="fas fa-cloud-upload-alt text-2xl mb-2"></i><br>
+                    <span class="text-sm font-medium">Klik untuk Upload Gambar Referensi Tahapan (Opsional)</span>
                 </button>
-                <button onclick="openFormModal()" class="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-lg font-medium transition shadow-sm sm:hidden">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </div>
-        </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex flex-col gap-6">
-        
-        <!-- Dashboard Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                <span class="text-slate-500 text-sm font-medium mb-1">Total Karya</span>
-                <span class="text-3xl font-bold text-slate-800" id="stat-total">0</span>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                <span class="text-slate-500 text-sm font-medium mb-1">Diterima</span>
-                <span class="text-3xl font-bold text-emerald-600" id="stat-received">0</span>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                <span class="text-slate-500 text-sm font-medium mb-1">Perlu Perbaikan</span>
-                <span class="text-3xl font-bold text-amber-500" id="stat-repair">0</span>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                <span class="text-slate-500 text-sm font-medium mb-1">Diinstalasi</span>
-                <span class="text-3xl font-bold text-blue-600" id="stat-installed">0</span>
-            </div>
-        </div>
-
-        <!-- Controls: Search & Filter -->
-        <div id="controls-area" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div class="relative w-full md:w-96">
-                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="Cari berdasarkan nama atau judul..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            </div>
-            
-            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                <select id="filterCategory" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
-                    <option value="">Semua Kategori</option>
-                    <!-- Options akan diisi dinamis oleh JavaScript -->
-                </select>
-                <select id="filterStatus" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
-                    <option value="">Semua Status</option>
-                    <!-- Options akan diisi dinamis oleh JavaScript -->
-                </select>
-            </div>
-        </div>
-
-        <!-- Loading State -->
-        <div id="loadingState" class="flex flex-col items-center justify-center py-20">
-            <div class="loader mb-4"></div>
-            <p class="text-slate-500 font-medium">Memuat data karya...</p>
-        </div>
-
-        <!-- Empty State (Hidden by default) -->
-        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-100 border-dashed">
-            <i class="fa-solid fa-palette text-6xl text-slate-300 mb-4"></i>
-            <h3 class="text-xl font-semibold text-slate-700 mb-2">Belum ada karya</h3>
-            <p class="text-slate-500 mb-6 text-center max-w-md">Data checklist karya masih kosong atau tidak ditemukan hasil yang sesuai dengan filter Anda.</p>
-            <button onclick="openFormModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg font-medium transition">
-                Tambah Karya Pertama
-            </button>
-        </div>
-
-        <!-- Artwork Grid -->
-        <div id="artworkGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 hidden">
-            <!-- Cards will be injected here via JS -->
-        </div>
-
-    </main>
-    
-    </div> <!-- Akhir dari export-container -->
-
-    <!-- Form Modal (Add / Edit) -->
-    <div id="formModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4 transform scale-95 transition-transform duration-300" id="formModalContent">
-            
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
-                <h2 class="text-xl font-bold text-slate-800" id="modalTitle">Tambah Karya Baru</h2>
-                <button onclick="closeFormModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
-                    <i class="fa-solid fa-times text-lg"></i>
-                </button>
-            </div>
-            
-            <form id="artworkForm" class="p-6 flex flex-col gap-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <!-- Seniman -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblArtist" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblArtist')" title="Klik untuk mengubah teks label">Nama Seniman</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="inputArtist" list="artistList" autocomplete="off" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="...">
-                        <datalist id="artistList"></datalist>
-                    </div>
-                    <!-- Judul -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblTitle" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblTitle')" title="Klik untuk mengubah teks label">Judul Karya</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="inputTitle" list="titleList" autocomplete="off" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="...">
-                        <datalist id="titleList"></datalist>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <!-- Kategori (Diperbarui menjadi Datalist agar bebas diubah) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblCategory" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblCategory')" title="Klik untuk mengubah teks label">Kategori</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="inputCategory" list="categoryList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                        <datalist id="categoryList">
-                            <option value="Lukisan"></option>
-                            <option value="Patung"></option>
-                            <option value="Instalasi"></option>
-                            <option value="Video Art"></option>
-                            <option value="Fotografi"></option>
-                            <option value="Media Campuran"></option>
-                            <option value="Lainnya"></option>
-                        </datalist>
-                    </div>
-                    <!-- Jumlah -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblQuantity" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblQuantity')" title="Klik untuk mengubah teks label">Jumlah Item</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" id="inputQuantity" min="1" value="1" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                    </div>
-                    <!-- Dimensi -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblDimensions" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblDimensions')" title="Klik untuk mengubah teks label">Dimensi/Ukuran</span>
-                        </label>
-                        <input type="text" id="inputDimensions" autocomplete="off" placeholder="P x L x T (cm)" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <!-- Kondisi (Diperbarui menjadi Datalist agar bebas diubah) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblCondition" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblCondition')" title="Klik untuk mengubah teks label">Kondisi Fisik</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="inputCondition" list="conditionList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                        <datalist id="conditionList">
-                            <option value="Sangat Baik"></option>
-                            <option value="Baik"></option>
-                            <option value="Perlu Perbaikan"></option>
-                            <option value="Rusak"></option>
-                        </datalist>
-                    </div>
-                    <!-- Status (Diperbarui menjadi Datalist agar bebas diubah) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">
-                            <span id="lblStatus" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblStatus')" title="Klik untuk mengubah teks label">Status Logistik</span> <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="inputStatus" list="statusList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                        <datalist id="statusList">
-                            <option value="Menunggu"></option>
-                            <option value="Diterima"></option>
-                            <option value="Diinstalasi"></option>
-                            <option value="Dikembalikan"></option>
-                        </datalist>
-                    </div>
-                </div>
-
-                <!-- Foto Karya -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">
-                        <span id="lblImage" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblImage')" title="Klik untuk mengubah teks label">Foto Karya (Utuh)</span>
-                    </label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-blue-500 transition relative overflow-hidden group" id="dropZone">
-                        <div class="space-y-1 text-center" id="uploadPlaceholder">
-                            <i class="fa-regular fa-image text-4xl text-slate-400 mb-2"></i>
-                            <div class="flex text-sm text-slate-600 justify-center">
-                                <label for="inputImage" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                                    <span>Pilih gambar</span>
-                                    <input id="inputImage" type="file" accept="image/*" class="sr-only">
-                                </label>
-                            </div>
-                            <p class="text-xs text-slate-500">PNG, JPG hingga 5MB (Otomatis dikompres)</p>
-                        </div>
-                        <!-- Preview Image in form -->
-                        <img id="formImagePreview" class="absolute inset-0 w-full h-full object-contain hidden bg-slate-100" />
-                        <button type="button" id="removeImgBtn" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full hidden flex items-center justify-center shadow hover:bg-red-600 z-10">
-                            <i class="fa-solid fa-trash text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Keterangan Tambahan -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">
-                        <span id="lblNotes" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblNotes')" title="Klik untuk mengubah teks label">Catatan Tambahan</span>
-                    </label>
-                    <textarea id="inputNotes" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none" placeholder="..."></textarea>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="mt-4 flex gap-3 justify-end pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeFormModal()" class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">Batal</button>
-                    <button type="submit" id="saveBtn" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
-                        <i class="fa-solid fa-save"></i> Simpan Data
+                <!-- State: Has Image -->
+                <div class="uploaded-image-wrapper hidden relative group max-w-full">
+                    <img src="" class="max-h-80 rounded shadow-md object-contain border border-slate-200">
+                    <button class="remove-image-btn absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity no-print" title="Hapus Gambar">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Image Zoom Fullscreen Modal -->
-    <div id="zoomModal" class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm hidden flex-col transition-opacity duration-300 opacity-0">
-        <!-- Top Toolbar -->
-        <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
-            <div class="text-white">
-                <h3 id="zoomTitle" class="font-semibold text-lg drop-shadow-md">Judul Karya</h3>
-                <p id="zoomArtist" class="text-sm text-slate-300 drop-shadow-md">Nama Seniman</p>
             </div>
-            <button onclick="closeZoomModal()" class="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition backdrop-blur">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
-
-        <!-- Image Container for Pan & Zoom -->
-        <div class="flex-1 overflow-hidden relative flex items-center justify-center" id="zoomContainerWrapper">
-            <img id="zoom-image-container" src="" alt="Zoomed Artwork" draggable="false" class="max-w-none shadow-2xl">
-        </div>
-
-        <!-- Bottom Controls -->
-        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-slate-700 p-2 rounded-full shadow-2xl z-10">
-            <button onclick="handleZoomOut()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Zoom Out">
-                <i class="fa-solid fa-minus"></i>
-            </button>
-            <div class="px-3 text-white font-medium text-sm w-16 text-center" id="zoomLevelIndicator">100%</div>
-            <button onclick="handleZoomIn()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Zoom In">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-            <div class="w-px h-6 bg-slate-600 mx-1"></div>
-            <button onclick="resetZoom()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Reset Zoom">
-                <i class="fa-solid fa-expand"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- Logika Aplikasi -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Variabel Global & Konfigurasi
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'jb-checklist-2026';
-        let firebaseConfig = null;
-        let customToken = null;
-
-        try {
-            if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
-            if (typeof __initial_auth_token !== 'undefined') customToken = __initial_auth_token;
-        } catch (e) { 
-            console.warn("Menjalankan versi lokal tanpa Firebase."); 
+            `;
         }
 
-        let db, auth, currentUser;
-        let artworksData = [];
-        let currentEditId = null;
-        let base64Image = null; 
+        const defaultHTML = `
+            <!-- Header Section -->
+            <div class="text-center mb-8 pb-6 border-b-[3px] border-slate-800 relative">
+                <h1 contenteditable="true" class="text-3xl md:text-4xl font-bold text-slate-900 mb-2 uppercase tracking-wide">RIMPANG DIGITAL KREATIF</h1>
+                <h2 contenteditable="true" class="text-lg md:text-xl font-semibold text-slate-600">Checklist Produksi & Pemasangan Booth Pameran</h2>
+                <p contenteditable="true" class="text-sm text-slate-500 italic mt-1 no-print">(Semua teks, angka, dan gambar di dokumen ini dapat diubah/diklik)</p>
+                
+                <div class="mt-6 flex flex-col md:flex-row justify-between text-sm text-slate-700 font-medium gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold">Nama Proyek:</span>
+                        <span contenteditable="true" class="border-b border-slate-300 min-w-[250px] text-left inline-block px-1 text-base text-blue-700">Booth Pameran Interaktif (Sesuai 3D)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold">Tanggal:</span>
+                        <span contenteditable="true" class="border-b border-slate-300 min-w-[150px] text-left inline-block px-1">${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Container -->
+            <div id="categories-wrapper">
+                <!-- Tahap 1: Struktur -->
+                <div class="category-block mb-8 rounded-md overflow-hidden shadow-sm border border-slate-300">
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-3 md:p-4">
+                        <h3 contenteditable="true" class="font-bold text-lg flex-1"><i class="fas fa-hammer mr-2 text-slate-300"></i>Tahap 1: Produksi Struktur & Woodworking</h3>
+                        <button class="delete-cat-btn no-print text-slate-400 hover:text-red-400 ml-4 transition-colors" title="Hapus Kategori Ini"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    ${generateImageBlock('cat_1')}
+                    <div class="table-responsive-wrapper overflow-x-auto w-full bg-white">
+                        <table class="w-full border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-y border-slate-300">
+                                    <th class="border-r border-slate-300 p-3 w-16 text-center font-semibold">Status</th>
+                                    <th class="border-r border-slate-300 p-3 text-left font-semibold">Komponen / Modul (P x L x T)</th>
+                                    <th class="border-r border-slate-300 p-3 w-24 text-center font-semibold">Qty</th>
+                                    <th class="border-r border-slate-300 p-3 text-left w-1/3 font-semibold">Keterangan Spesifik</th>
+                                    <th class="p-2 w-10 text-center no-print delete-col">#</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateRow("Pembuatan Base Modul Paling Kiri (150 x 45 x 45 cm)", "1 Set", "Material Multiplek tebal. Ada grafis peta di atasnya nanti.")}
+                                ${generateRow("Pembuatan Pilar Merah Modul Kiri (15 x 15 x 60 cm)", "1 Pcs", "Berdiri di atas base kiri, terdapat angka '2' timbul/grafis.")}
+                                ${generateRow("Pembuatan Modul Tengah Kiri (60 x 60 x 75 cm)", "1 Set", "Siapkan lubang/ceruk di bagian atas untuk monitor/display kotak.")}
+                                ${generateRow("Pembuatan Modul Tengah Utama (105 x 60 x 60 cm)", "1 Set", "Menyambung dengan modul tinggi.")}
+                                ${generateRow("Pembuatan Box Merah Kecil Tengah (Est. 15 x 15 x 15 cm)", "1 Pcs", "Diletakkan di atas pinggir kanan Modul Tengah Utama.")}
+                                ${generateRow("Pembuatan Modul Kanan Interaktif (90 x 75 x 60 cm)", "1 Set", "Paling kompleks. Siapkan 3 lubang display persegi dan lubang tombol di bawahnya.")}
+                                ${generateRow("Pembuatan Base Modul Paling Kanan (120 x 60 x 60 cm)", "1 Set", "Menyambung rata dengan modul interaktif.")}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-white p-2 border-t border-slate-300">
+                        <button class="add-row-btn no-print text-blue-600 font-semibold text-sm flex items-center gap-1 hover:text-blue-800 transition-colors"><i class="fas fa-plus-circle"></i> Tambah Item Pekerjaan</button>
+                    </div>
+                </div>
+
+                <!-- Tahap 2: Finishing -->
+                <div class="category-block mb-8 rounded-md overflow-hidden shadow-sm border border-slate-300">
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-3 md:p-4">
+                        <h3 contenteditable="true" class="font-bold text-lg flex-1"><i class="fas fa-paint-roller mr-2 text-slate-300"></i>Tahap 2: Finishing, Pengecatan & Visual</h3>
+                        <button class="delete-cat-btn no-print text-slate-400 hover:text-red-400 ml-4 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    ${generateImageBlock('cat_2')}
+                    <div class="table-responsive-wrapper overflow-x-auto w-full bg-white">
+                        <table class="w-full border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-y border-slate-300">
+                                    <th class="border-r border-slate-300 p-3 w-16 text-center font-semibold">Status</th>
+                                    <th class="border-r border-slate-300 p-3 text-left font-semibold">Deskripsi Pekerjaan</th>
+                                    <th class="border-r border-slate-300 p-3 w-24 text-center font-semibold">Qty</th>
+                                    <th class="border-r border-slate-300 p-3 text-left w-1/3 font-semibold">Keterangan Spesifik</th>
+                                    <th class="p-2 w-10 text-center no-print delete-col">#</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateRow("Dempul dan Amplas seluruh modul base", "Semua", "Pastikan tidak ada pori kayu terlihat, sudut (bevel) rapi.")}
+                                ${generateRow("Pengecatan Warna Utama (Dark Navy/Abu Gelap)", "Semua Base", "Finishing Doff/Matte sesuai 3D render.")}
+                                ${generateRow("Pengecatan Warna Aksen (Merah Bata)", "2 Item", "Khusus Pilar angka 2 dan Box kecil di tengah.")}
+                                ${generateRow("Pemasangan Visual: Stiker Peta Indonesia", "1 Lot", "Ditempel rata di atas Base Modul Paling Kiri.")}
+                                ${generateRow("Pemasangan Visual: Angka '2'", "1 Lot", "Di sisi samping pilar merah kiri.")}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-white p-2 border-t border-slate-300">
+                        <button class="add-row-btn no-print text-blue-600 font-semibold text-sm flex items-center gap-1 hover:text-blue-800 transition-colors"><i class="fas fa-plus-circle"></i> Tambah Item Pekerjaan</button>
+                    </div>
+                </div>
+
+                <!-- Tahap 3: Elektrikal -->
+                <div class="category-block mb-8 rounded-md overflow-hidden shadow-sm border border-slate-300">
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-3 md:p-4">
+                        <h3 contenteditable="true" class="font-bold text-lg flex-1"><i class="fas fa-plug mr-2 text-slate-300"></i>Tahap 3: Integrasi Hardware & Elektrikal</h3>
+                        <button class="delete-cat-btn no-print text-slate-400 hover:text-red-400 ml-4 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    ${generateImageBlock('cat_3')}
+                    <div class="table-responsive-wrapper overflow-x-auto w-full bg-white">
+                        <table class="w-full border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-y border-slate-300">
+                                    <th class="border-r border-slate-300 p-3 w-16 text-center font-semibold">Status</th>
+                                    <th class="border-r border-slate-300 p-3 text-left font-semibold">Deskripsi Pekerjaan</th>
+                                    <th class="border-r border-slate-300 p-3 w-24 text-center font-semibold">Qty</th>
+                                    <th class="border-r border-slate-300 p-3 text-left w-1/3 font-semibold">Keterangan Spesifik</th>
+                                    <th class="p-2 w-10 text-center no-print delete-col">#</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateRow("Instalasi Monitor/Display di Modul Tengah Kiri", "1 Unit", "Pastikan layar tertanam rata (flush) dengan top table.")}
+                                ${generateRow("Instalasi 3 Monitor/Display di Modul Kanan", "3 Unit", "Tiga layar sejajar di atas meja interaktif.")}
+                                ${generateRow("Instalasi Tombol/Interface Fisik", "3 Set", "Terpasang tepat di bawah ke-3 layar modul kanan.")}
+                                ${generateRow("Instalasi Kabel Power & Manajemen Kabel", "1 Lot", "Tarik kabel tersembunyi antar modul dari dalam.")}
+                                ${generateRow("Testing Nyala Hardware & Sensor (QC)", "1 Lot", "Wajib test nyala minimal 4 jam sebelum loading.")}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-white p-2 border-t border-slate-300">
+                        <button class="add-row-btn no-print text-blue-600 font-semibold text-sm flex items-center gap-1 hover:text-blue-800 transition-colors"><i class="fas fa-plus-circle"></i> Tambah Item Pekerjaan</button>
+                    </div>
+                </div>
+
+                <!-- Tahap 4: Instalasi Lapangan -->
+                <div class="category-block mb-4 rounded-md overflow-hidden shadow-sm border border-slate-300">
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-3 md:p-4">
+                        <h3 contenteditable="true" class="font-bold text-lg flex-1"><i class="fas fa-truck-loading mr-2 text-slate-300"></i>Tahap 4: Pemasangan & Serah Terima di Lapangan</h3>
+                        <button class="delete-cat-btn no-print text-slate-400 hover:text-red-400 ml-4 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    ${generateImageBlock('cat_4')}
+                    <div class="table-responsive-wrapper overflow-x-auto w-full bg-white">
+                        <table class="w-full border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-y border-slate-300">
+                                    <th class="border-r border-slate-300 p-3 w-16 text-center font-semibold">Status</th>
+                                    <th class="border-r border-slate-300 p-3 text-left font-semibold">Deskripsi Pekerjaan</th>
+                                    <th class="border-r border-slate-300 p-3 w-24 text-center font-semibold">Qty</th>
+                                    <th class="border-r border-slate-300 p-3 text-left w-1/3 font-semibold">Keterangan Spesifik</th>
+                                    <th class="p-2 w-10 text-center no-print delete-col">#</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateRow("Loading Barang & Wrapping Aman", "Semua", "Gunakan bubble wrap berlapis untuk layar.")}
+                                ${generateRow("Penyusunan Modul berurutan & Leveling Lantai", "5 Modul", "Gunakan waterpass, ganjal jika lantai venue miring.")}
+                                ${generateRow("Penguncian Joinery (Penyambungan antar modul)", "1 Lot", "Baut dari sisi dalam agar susunan panjang menyatu kaku.")}
+                                ${generateRow("Koneksi Power ke Listrik Venue", "1 Lot", "Cek tegangan venue, pastikan MCB booth aman.")}
+                                ${generateRow("Final Touch-up (Cat lecet) & Pembersihan", "Semua", "Sediakan cat cadangan, lap basah, serah terima klien.")}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-white p-2 border-t border-slate-300">
+                        <button class="add-row-btn no-print text-blue-600 font-semibold text-sm flex items-center gap-1 hover:text-blue-800 transition-colors"><i class="fas fa-plus-circle"></i> Tambah Item Pekerjaan</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-10 mb-4 no-print border-t-2 border-dashed border-slate-300 pt-8">
+                <button id="add-cat-btn" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-3 rounded-md font-semibold shadow transition-all flex items-center justify-center mx-auto">
+                    <i class="fas fa-layer-group mr-2"></i> Tambah Kategori Tahapan Baru
+                </button>
+            </div>
+        `;
+
+        const mainContainer = document.getElementById('export-area');
         
-        const LOCAL_STORAGE_KEY = 'jb2026_artworks_data';
-        const LABELS_STORAGE_KEY = 'jb2026_custom_labels';
-        
-        const savedLabels = JSON.parse(localStorage.getItem(LABELS_STORAGE_KEY) || '{}');
-        const defaultLabels = {
-            'lblArtist': 'Nama Seniman',
-            'lblTitle': 'Judul Karya',
-            'lblCategory': 'Kategori',
-            'lblQuantity': 'Jumlah Item',
-            'lblDimensions': 'Dimensi/Ukuran',
-            'lblCondition': 'Kondisi Fisik',
-            'lblStatus': 'Status Logistik',
-            'lblImage': 'Foto Karya (Utuh)',
-            'lblNotes': 'Catatan Tambahan'
-        };
-
-        function loadCustomLabels() {
-            for (const [id, defaultText] of Object.entries(defaultLabels)) {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.textContent = savedLabels[id] || defaultText;
-                }
-            }
-        }
-
-        window.saveLabel = function(id) {
-            const el = document.getElementById(id);
-            if (el) {
-                savedLabels[id] = el.textContent.trim() || defaultLabels[id];
-                if (!el.textContent.trim()) el.textContent = defaultLabels[id];
-                localStorage.setItem(LABELS_STORAGE_KEY, JSON.stringify(savedLabels));
-            }
-        }
-
-        function generateUniqueId() {
-            return typeof crypto !== 'undefined' && crypto.randomUUID 
-                ? crypto.randomUUID() 
-                : 'id-' + Math.random().toString(36).substring(2, 9) + Date.now();
-        }
-
-        function saveToLocalStorage() {
-            try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(artworksData));
-            } catch (e) {
-                console.error("Gagal menyimpan ke LocalStorage:", e);
-                showToast("Peringatan: Gagal menyimpan gambar lokal. Ukuran memori browser penuh.", "warning");
-            }
-        }
-
-        function loadFromLocalStorage() {
-            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        function initApp() {
+            const savedData = localStorage.getItem('rimpang-checklist-data');
             if (savedData) {
-                try {
-                    artworksData = JSON.parse(savedData);
-                } catch (e) {
-                    console.error("Data LocalStorage korup, mereset data lokal.");
-                    artworksData = [];
+                mainContainer.innerHTML = savedData;
+                // Re-apply checked state for checkboxes
+                document.querySelectorAll('.task-check').forEach(chk => {
+                    chk.checked = chk.hasAttribute('checked');
+                });
+            } else {
+                mainContainer.innerHTML = defaultHTML;
+            }
+        }
+        
+        let saveTimeout;
+        function saveData() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('rimpang-checklist-data', mainContainer.innerHTML);
+            }, 500);
+        }
+
+        function compressImage(file, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    // Max width for reference images
+                    const MAX_WIDTH = 1000; 
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Compress to JPEG with 0.7 quality
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    callback(compressedBase64);
                 }
             }
-            updateDynamicFilters();
-            renderArtworks();
-            updateStats();
         }
 
-        if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                initAuth();
-            } catch (err) {
-                console.error("Error inisialisasi Firebase", err);
-                initOfflineMode();
-            }
-        } else {
-            initOfflineMode();
-        }
-
-        function initOfflineMode() {
-            showToast("Mode Offline Aktif. Data tersimpan aman di browser Anda.", "info");
-            document.getElementById('loadingState').classList.add('hidden');
-            loadCustomLabels();
-            loadFromLocalStorage();
-        }
-
-        async function initAuth() {
-            try {
-                if (customToken) {
-                    await signInWithCustomToken(auth, customToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                currentUser = auth.currentUser;
-                setupRealtimeListener();
-            } catch (error) {
-                console.error("Gagal Autentikasi Firebase:", error);
-                showToast("Menggunakan penyimpanan lokal.", "warning");
-                initOfflineMode();
-            }
-        }
-
-        function setupRealtimeListener() {
-            if (!currentUser) return;
-            
-            loadCustomLabels();
-            
-            const artworksRef = collection(db, 'artifacts', appId, 'public', 'data', 'artworks');
-            const q = query(artworksRef);
-
-            onSnapshot(q, (snapshot) => {
-                artworksData = [];
-                snapshot.forEach((doc) => {
-                    artworksData.push({ id: doc.id, ...doc.data() });
-                });
-                
-                saveToLocalStorage();
-                updateDynamicFilters();
-                renderArtworks();
-                updateStats();
-                document.getElementById('loadingState').classList.add('hidden');
-            }, (error) => {
-                console.error("Gagal mendengarkan data dari server:", error);
-                showToast("Gagal sinkronisasi. Memuat data lokal...", "error");
-                initOfflineMode();
-            });
-        }
-
-        const imgInput = document.getElementById('inputImage');
-        const formImgPreview = document.getElementById('formImagePreview');
-        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-        const removeImgBtn = document.getElementById('removeImgBtn');
-
-        imgInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                compressImage(file, 600, 600, 0.7).then(base64 => {
-                    base64Image = base64;
-                    showImagePreview(base64);
-                }).catch(err => {
-                    showToast("Gagal memproses gambar", "error");
-                });
-            }
+        mainContainer.addEventListener('input', (e) => {
+            saveData();
         });
 
-        function showImagePreview(src) {
-            formImgPreview.src = src;
-            formImgPreview.classList.remove('hidden');
-            uploadPlaceholder.classList.add('hidden');
-            removeImgBtn.classList.remove('hidden');
-        }
+        mainContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('task-check')) {
+                if (e.target.checked) {
+                    e.target.setAttribute('checked', 'checked');
+                } else {
+                    e.target.removeAttribute('checked');
+                }
+                saveData();
+            }
+            
+            // Handle Image Upload File Change
+            if (e.target.classList.contains('image-upload-input')) {
+                const file = e.target.files[0];
+                if (file) {
+                    const container = e.target.closest('.image-container');
+                    const uploadBtn = container.querySelector('.trigger-upload-btn');
+                    const wrapper = container.querySelector('.uploaded-image-wrapper');
+                    const img = container.querySelector('img');
 
-        function clearImagePreview() {
-            base64Image = null;
-            imgInput.value = '';
-            formImgPreview.src = '';
-            formImgPreview.classList.add('hidden');
-            uploadPlaceholder.classList.remove('hidden');
-            removeImgBtn.classList.add('hidden');
-        }
+                    // Show loading state on button
+                    const originalText = uploadBtn.innerHTML;
+                    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br><span class="text-sm font-medium">Memproses gambar...</span>';
 
-        removeImgBtn.addEventListener('click', clearImagePreview);
-
-        function compressImage(file, maxWidth, maxHeight, quality) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = event => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height = Math.round(height *= maxWidth / width);
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width = Math.round(width *= maxHeight / height);
-                                height = maxHeight;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+                    compressImage(file, (base64) => {
+                        img.src = base64;
+                        // Set attributes for state
+                        img.setAttribute('src', base64);
                         
-                        resolve(canvas.toDataURL('image/jpeg', quality));
-                    };
-                    img.onerror = () => reject(new Error("Gagal meload gambar"));
-                };
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        // --- UPDATE FILTER DINAMIS ---
-        // Supaya jika user mengetik Kategori / Status baru yang custom, filter utama otomatis punya opsinya
-        function updateDynamicFilters() {
-            const filterCat = document.getElementById('filterCategory');
-            const filterStat = document.getElementById('filterStatus');
-
-            const currentCat = filterCat.value;
-            const currentStat = filterStat.value;
-
-            // Kumpulkan opsi bawaan + opsi unik hasil custom input user
-            const defaultCats = ['Lukisan', 'Patung', 'Instalasi', 'Video Art', 'Fotografi', 'Media Campuran', 'Lainnya'];
-            const defaultStats = ['Menunggu', 'Diterima', 'Diinstalasi', 'Dikembalikan'];
-
-            const allCategories = [...new Set([...defaultCats, ...artworksData.map(a => a.category).filter(Boolean)])];
-            const allStatuses = [...new Set([...defaultStats, ...artworksData.map(a => a.status).filter(Boolean)])];
-
-            filterCat.innerHTML = '<option value="">Semua Kategori</option>' + allCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-            filterStat.innerHTML = '<option value="">Semua Status</option>' + allStatuses.map(s => `<option value="${s}">${s}</option>`).join('');
-
-            // Kembalikan nilai filter yang sedang terpilih agar tidak reset saat update realtime
-            filterCat.value = currentCat || "";
-            filterStat.value = currentStat || "";
-            
-            // Update Datalists untuk Nama & Judul (Autocomplete berbasis data yang ada)
-            const artistList = document.getElementById('artistList');
-            const titleList = document.getElementById('titleList');
-            if(artistList) {
-                const artists = [...new Set(artworksData.map(a => a.artist).filter(Boolean))];
-                artistList.innerHTML = artists.map(a => `<option value="${a}"></option>`).join('');
-            }
-            if(titleList) {
-                const titles = [...new Set(artworksData.map(a => a.title).filter(Boolean))];
-                titleList.innerHTML = titles.map(t => `<option value="${t}"></option>`).join('');
-            }
-        }
-
-        window.openFormModal = function(editId = null) {
-            currentEditId = editId;
-            const modal = document.getElementById('formModal');
-            const form = document.getElementById('artworkForm');
-            const title = document.getElementById('modalTitle');
-            
-            clearImagePreview();
-            
-            if (editId) {
-                title.textContent = "Edit Data Karya";
-                const item = artworksData.find(a => a.id === editId);
-                if (item) {
-                    document.getElementById('inputArtist').value = item.artist;
-                    document.getElementById('inputTitle').value = item.title;
-                    document.getElementById('inputCategory').value = item.category;
-                    document.getElementById('inputQuantity').value = item.quantity;
-                    document.getElementById('inputDimensions').value = item.dimensions || '';
-                    document.getElementById('inputCondition').value = item.condition;
-                    document.getElementById('inputStatus').value = item.status;
-                    document.getElementById('inputNotes').value = item.notes || '';
-                    
-                    if (item.image) {
-                        base64Image = item.image;
-                        showImagePreview(item.image);
-                    }
+                        uploadBtn.classList.add('hidden');
+                        wrapper.classList.remove('hidden');
+                        container.classList.add('has-image');
+                        
+                        uploadBtn.innerHTML = originalText; // Reset button text for future
+                        
+                        // Clear input so same file can be uploaded again if deleted
+                        e.target.value = ''; 
+                        
+                        saveData();
+                    });
                 }
-            } else {
-                title.textContent = "Tambah Karya Baru";
-                form.reset();
-                document.getElementById('inputQuantity').value = 1;
+            }
+        });
+
+        mainContainer.addEventListener('click', (e) => {
+            // Trigger File Input Click
+            if (e.target.closest('.trigger-upload-btn')) {
+                const btn = e.target.closest('.trigger-upload-btn');
+                const fileInput = btn.parentElement.querySelector('.image-upload-input');
+                fileInput.click();
             }
 
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                document.getElementById('formModalContent').classList.remove('scale-95');
-            }, 10);
-        }
+            // Remove Image
+            if (e.target.closest('.remove-image-btn')) {
+                const btn = e.target.closest('.remove-image-btn');
+                const container = btn.closest('.image-container');
+                const uploadBtn = container.querySelector('.trigger-upload-btn');
+                const wrapper = container.querySelector('.uploaded-image-wrapper');
+                const img = container.querySelector('img');
 
-        window.closeFormModal = function() {
-            const modal = document.getElementById('formModal');
-            modal.classList.add('opacity-0');
-            document.getElementById('formModalContent').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        }
+                img.src = "";
+                img.removeAttribute('src');
+                wrapper.classList.add('hidden');
+                uploadBtn.classList.remove('hidden');
+                container.classList.remove('has-image');
+                
+                saveData();
+            }
 
-        document.getElementById('artworkForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const btn = document.getElementById('saveBtn');
-            const btnOriginalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-            btn.disabled = true;
-
-            const newArtwork = {
-                artist: document.getElementById('inputArtist').value.trim(),
-                title: document.getElementById('inputTitle').value.trim(),
-                category: document.getElementById('inputCategory').value.trim(), // Mendukung Teks Bebas
-                quantity: parseInt(document.getElementById('inputQuantity').value) || 1,
-                dimensions: document.getElementById('inputDimensions').value.trim(),
-                condition: document.getElementById('inputCondition').value.trim(), // Mendukung Teks Bebas
-                status: document.getElementById('inputStatus').value.trim(),       // Mendukung Teks Bebas
-                notes: document.getElementById('inputNotes').value.trim(),
-                image: base64Image,
-                updatedAt: new Date().toISOString()
-            };
-
-            try {
-                const idToSave = currentEditId || generateUniqueId();
-                if (!currentEditId) newArtwork.createdAt = new Date().toISOString();
-
-                if (db && currentUser) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'artworks', idToSave);
-                    await setDoc(docRef, newArtwork, { merge: true });
-                    showToast(currentEditId ? "Data diperbarui di server" : "Karya baru ditambahkan", "success");
-                } else {
-                    newArtwork.id = idToSave;
-                    if (currentEditId) {
-                        const idx = artworksData.findIndex(a => a.id === currentEditId);
-                        if(idx > -1) artworksData[idx] = { ...artworksData[idx], ...newArtwork };
-                    } else {
-                        artworksData.push(newArtwork);
-                    }
-                    
-                    saveToLocalStorage();
-                    updateDynamicFilters();
-                    renderArtworks();
-                    updateStats();
-                    showToast(currentEditId ? "Data lokal diperbarui" : "Karya lokal ditambahkan", "success");
+            // Add Row
+            if (e.target.closest('.add-row-btn')) {
+                const btn = e.target.closest('.add-row-btn');
+                const tbody = btn.parentElement.previousElementSibling.querySelector('tbody');
+                tbody.insertAdjacentHTML('beforeend', generateRow());
+                saveData();
+            }
+            
+            // Delete Row
+            if (e.target.closest('.delete-row-btn')) {
+                if (confirm('Hapus baris tugas ini?')) {
+                    e.target.closest('tr').remove();
+                    saveData();
                 }
-                
-                closeFormModal();
-            } catch (error) {
-                console.error("Gagal menyimpan:", error);
-                showToast("Terjadi kesalahan saat menyimpan", "error");
-            } finally {
-                btn.innerHTML = btnOriginalHtml;
-                btn.disabled = false;
             }
-        });
 
-        window.deleteArtwork = async function(id) {
-            const artwork = artworksData.find(a => a.id === id);
-            if (!artwork) return;
-
-            createCustomConfirm(
-                `Hapus karya "${artwork.title}"?`,
-                async () => {
-                    if (db && currentUser) {
-                        try {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'artworks', id));
-                            showToast("Karya berhasil dihapus dari server", "success");
-                        } catch (e) {
-                            showToast("Gagal menghapus dari server", "error");
-                        }
-                    } else {
-                        artworksData = artworksData.filter(a => a.id !== id);
-                        saveToLocalStorage();
-                        updateDynamicFilters();
-                        renderArtworks();
-                        updateStats();
-                        showToast("Karya dihapus secara lokal", "success");
-                    }
+            // Delete Category
+            if (e.target.closest('.delete-cat-btn')) {
+                if (confirm('PERINGATAN: Hapus seluruh kategori tahapan ini beserta semua isinya?')) {
+                    e.target.closest('.category-block').remove();
+                    saveData();
                 }
-            );
-        }
-
-        function renderArtworks() {
-            const grid = document.getElementById('artworkGrid');
-            const emptyState = document.getElementById('emptyState');
-            
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filterCat = document.getElementById('filterCategory').value;
-            const filterStat = document.getElementById('filterStatus').value;
-
-            grid.innerHTML = '';
-            
-            let filtered = artworksData.filter(item => {
-                const matchSearch = item.title.toLowerCase().includes(searchTerm) || item.artist.toLowerCase().includes(searchTerm);
-                const matchCat = filterCat === "" || item.category === filterCat;
-                const matchStat = filterStat === "" || item.status === filterStat;
-                return matchSearch && matchCat && matchStat;
-            });
-
-            if (filtered.length === 0) {
-                grid.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                grid.classList.remove('hidden');
-                
-                filtered.forEach(item => {
-                    grid.appendChild(createCardElement(item));
-                });
             }
-        }
 
-        document.getElementById('searchInput').addEventListener('input', renderArtworks);
-        document.getElementById('filterCategory').addEventListener('change', renderArtworks);
-        document.getElementById('filterStatus').addEventListener('change', renderArtworks);
-
-        // Styling Dinamis yang mendukung teks kustom (mencari kata kunci kemiripan text string)
-        function getConditionColor(condition) {
-            const c = condition?.toLowerCase() || '';
-            if (c.includes('sangat baik')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-            if (c.includes('baik')) return 'bg-blue-100 text-blue-700 border-blue-200';
-            if (c.includes('perbaikan') || c.includes('kurang')) return 'bg-amber-100 text-amber-700 border-amber-200';
-            if (c.includes('rusak') || c.includes('hancur')) return 'bg-red-100 text-red-700 border-red-200';
-            return 'bg-slate-100 text-slate-700 border-slate-200';
-        }
-
-        function getStatusColor(status) {
-            const s = status?.toLowerCase() || '';
-            if (s.includes('menunggu')) return 'bg-slate-100 text-slate-600';
-            if (s.includes('terima')) return 'bg-emerald-500 text-white shadow-emerald-200';
-            if (s.includes('instalasi')) return 'bg-blue-500 text-white shadow-blue-200';
-            if (s.includes('kembali')) return 'bg-purple-500 text-white shadow-purple-200';
-            return 'bg-slate-600 text-white shadow-slate-200';
-        }
-
-        function createCardElement(item) {
-            const div = document.createElement('div');
-            div.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group transition hover:shadow-md";
-            
-            const imgArea = document.createElement('div');
-            imgArea.className = "h-56 w-full bg-slate-100 relative cursor-zoom-in overflow-hidden border-b border-slate-100";
-            
-            const imgUrl = item.image || `https://placehold.co/600x400/f1f5f9/64748b?text=Tidak+Ada+Foto\\n${encodeURIComponent(item.category)}`;
-            
-            imgArea.innerHTML = `
-                <img src="${imgUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition duration-300 flex items-center justify-center">
-                    <div class="w-12 h-12 rounded-full bg-white/90 text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 transform scale-75 group-hover:scale-100 shadow-lg">
-                        <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
+            // Add Category
+            if (e.target.closest('#add-cat-btn')) {
+                const wrapper = document.getElementById('categories-wrapper');
+                const newId = 'cat_' + Date.now();
+                const newCat = `
+                <div class="category-block mb-8 rounded-md overflow-hidden shadow-sm border border-slate-300">
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-3 md:p-4">
+                        <h3 contenteditable="true" class="font-bold text-lg flex-1"><i class="fas fa-cube mr-2 text-slate-300"></i>Tahap Baru: Judul Tahapan</h3>
+                        <button class="delete-cat-btn no-print text-slate-400 hover:text-red-400 ml-4 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    ${generateImageBlock(newId)}
+                    <div class="table-responsive-wrapper overflow-x-auto w-full bg-white">
+                        <table class="w-full border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-y border-slate-300">
+                                    <th class="border-r border-slate-300 p-3 w-16 text-center font-semibold">Status</th>
+                                    <th class="border-r border-slate-300 p-3 text-left font-semibold">Deskripsi Pekerjaan</th>
+                                    <th class="border-r border-slate-300 p-3 w-24 text-center font-semibold">Qty</th>
+                                    <th class="border-r border-slate-300 p-3 text-left w-1/3 font-semibold">Keterangan Spesifik</th>
+                                    <th class="p-2 w-10 text-center no-print delete-col">#</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateRow()}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bg-white p-2 border-t border-slate-300">
+                        <button class="add-row-btn no-print text-blue-600 font-semibold text-sm flex items-center gap-1 hover:text-blue-800 transition-colors"><i class="fas fa-plus-circle"></i> Tambah Item Pekerjaan</button>
                     </div>
                 </div>
-                <div class="absolute top-3 right-3 ${getStatusColor(item.status)} px-3 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-sm">
-                    ${item.status}
-                </div>
-            `;
-            
-            imgArea.onclick = () => openZoomModal(imgUrl, item.title, item.artist);
-            div.appendChild(imgArea);
-
-            const content = document.createElement('div');
-            content.className = "p-5 flex-1 flex flex-col";
-            content.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 class="font-bold text-lg text-slate-800 leading-tight mb-1">${item.title}</h3>
-                        <p class="text-sm font-medium text-blue-600">${item.artist}</p>
-                    </div>
-                </div>
-                
-                <div class="mt-4 flex flex-wrap gap-2 text-xs">
-                    <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium border border-slate-200 flex items-center gap-1">
-                        <i class="fa-solid fa-layer-group opacity-60"></i> ${item.category}
-                    </span>
-                    <span class="px-2 py-1 rounded border font-medium flex items-center gap-1 ${getConditionColor(item.condition)}">
-                        <i class="fa-solid fa-heart-pulse opacity-60"></i> ${item.condition}
-                    </span>
-                    <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium border border-slate-200 flex items-center gap-1">
-                        <i class="fa-solid fa-cubes opacity-60"></i> Qty: ${item.quantity}
-                    </span>
-                </div>
-                
-                ${item.dimensions ? `<p class="text-xs text-slate-500 mt-3 flex items-center gap-1"><i class="fa-solid fa-ruler-combined opacity-60"></i> ${item.dimensions}</p>` : ''}
-            `;
-            div.appendChild(content);
-
-            const actions = document.createElement('div');
-            actions.className = "px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center no-print export-hide";
-            actions.innerHTML = `
-                <div class="flex gap-2 w-full">
-                    <button onclick="openFormModal('${item.id}')" class="flex-1 py-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition flex items-center justify-center gap-2 border border-transparent hover:border-blue-100">
-                        <i class="fa-solid fa-pen-to-square"></i> Edit
-                    </button>
-                    <div class="w-px bg-slate-200 my-1"></div>
-                    <button onclick="deleteArtwork('${item.id}')" class="flex-1 py-1.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded transition flex items-center justify-center gap-2 border border-transparent hover:border-red-100">
-                        <i class="fa-solid fa-trash-can"></i> Hapus
-                    </button>
-                </div>
-            `;
-            div.appendChild(actions);
-
-            return div;
-        }
-
-        function updateStats() {
-            document.getElementById('stat-total').textContent = artworksData.length;
-            document.getElementById('stat-received').textContent = artworksData.filter(a => a.status?.toLowerCase().includes('terima')).length;
-            document.getElementById('stat-repair').textContent = artworksData.filter(a => a.condition?.toLowerCase().includes('rusak') || a.condition?.toLowerCase().includes('perbaikan')).length;
-            document.getElementById('stat-installed').textContent = artworksData.filter(a => a.status?.toLowerCase().includes('instalasi')).length;
-        }
-
-        const zoomModal = document.getElementById('zoomModal');
-        const zoomImg = document.getElementById('zoom-image-container');
-        const zoomLevelText = document.getElementById('zoomLevelIndicator');
-        
-        let zScale = 1;
-        let zTranslateX = 0;
-        let zTranslateY = 0;
-        let isDragging = false;
-        let startX, startY;
-        const scaleStep = 0.25;
-
-        window.openZoomModal = function(src, title, artist) {
-            zoomImg.src = src;
-            document.getElementById('zoomTitle').textContent = title;
-            document.getElementById('zoomArtist').textContent = artist;
-            
-            resetZoomLogic();
-            
-            zoomModal.classList.remove('hidden');
-            setTimeout(() => { zoomModal.classList.remove('opacity-0'); }, 10);
-            document.body.style.overflow = 'hidden'; 
-        }
-
-        window.closeZoomModal = function() {
-            zoomModal.classList.add('opacity-0');
-            setTimeout(() => { 
-                zoomModal.classList.add('hidden'); 
-                zoomImg.src = '';
-            }, 300);
-            document.body.style.overflow = 'auto';
-        }
-
-        function applyZoomTransform() {
-            zoomImg.style.transform = `translate(${zTranslateX}px, ${zTranslateY}px) scale(${zScale})`;
-            zoomLevelText.textContent = `${Math.round(zScale * 100)}%`;
-        }
-
-        function resetZoomLogic() {
-            zScale = 1; zTranslateX = 0; zTranslateY = 0;
-            applyZoomTransform();
-        }
-        
-        window.resetZoom = resetZoomLogic;
-        window.handleZoomIn = function() { if (zScale < 5) { zScale += scaleStep; applyZoomTransform(); } }
-        window.handleZoomOut = function() { if (zScale > 0.5) { zScale -= scaleStep; applyZoomTransform(); } }
-
-        const zoomWrapper = document.getElementById('zoomContainerWrapper');
-        zoomWrapper.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            if (e.deltaY < 0 && zScale < 5) { zScale += scaleStep; } 
-            else if (e.deltaY > 0 && zScale > 0.5) { zScale -= scaleStep; }
-            applyZoomTransform();
-        });
-
-        zoomImg.addEventListener('mousedown', (e) => {
-            e.preventDefault(); 
-            isDragging = true;
-            startX = e.clientX - zTranslateX;
-            startY = e.clientY - zTranslateY;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            zTranslateX = e.clientX - startX;
-            zTranslateY = e.clientY - startY;
-            applyZoomTransform();
-        });
-
-        window.addEventListener('mouseup', () => { isDragging = false; });
-
-        let touchStartX, touchStartY;
-        zoomImg.addEventListener('touchstart', (e) => {
-            if(e.touches.length === 1) {
-                isDragging = true;
-                touchStartX = e.touches[0].clientX - zTranslateX;
-                touchStartY = e.touches[0].clientY - zTranslateY;
-            }
-        });
-        
-        zoomImg.addEventListener('touchmove', (e) => {
-            if(!isDragging || e.touches.length !== 1) return;
-            e.preventDefault();
-            zTranslateX = e.touches[0].clientX - touchStartX;
-            zTranslateY = e.touches[0].clientY - touchStartY;
-            applyZoomTransform();
-        });
-
-        zoomImg.addEventListener('touchend', () => { isDragging = false; });
-
-        // --- SISTEM TOAST & KONFIRMASI ---
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            
-            let color = 'bg-slate-800 text-white';
-            let icon = 'fa-info-circle';
-            
-            if (type === 'success') { color = 'bg-emerald-600 text-white'; icon = 'fa-check-circle'; }
-            else if (type === 'error') { color = 'bg-red-600 text-white'; icon = 'fa-exclamation-triangle'; }
-            else if (type === 'warning') { color = 'bg-amber-500 text-white'; icon = 'fa-exclamation-circle'; }
-
-            toast.className = `${color} px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 font-medium text-sm border border-black/10 max-w-sm pointer-events-auto`;
-            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${message}</span>`;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
-            setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function createCustomConfirm(message, onConfirm) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            
-            toast.className = `bg-white px-4 py-4 rounded-xl shadow-2xl flex flex-col gap-3 transform translate-y-10 opacity-0 transition-all duration-300 border border-slate-200 pointer-events-auto max-w-sm`;
-            toast.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 mb-1">Konfirmasi</h4>
-                        <p class="text-sm text-slate-600">${message}</p>
-                    </div>
-                </div>
-                <div class="flex gap-2 justify-end mt-2">
-                    <button class="cancel-btn px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Batal</button>
-                    <button class="confirm-btn px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition">Ya, Hapus</button>
-                </div>
-            `;
-            
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
-
-            const removeToast = () => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            };
-
-            toast.querySelector('.cancel-btn').onclick = removeToast;
-            toast.querySelector('.confirm-btn').onclick = () => {
-                onConfirm();
-                removeToast();
-            };
-        }
-
-        window.exportPrint = function() { window.print(); };
-
-        window.exportJPG = async function() {
-            if (artworksData.length === 0) {
-                showToast("Tidak ada data untuk diekspor", "warning");
-                return;
-            }
-            
-            showToast("Menyiapkan gambar. Mohon tunggu...", "info");
-            
-            const elementsToHide = document.querySelectorAll('.export-hide, #controls-area');
-            elementsToHide.forEach(el => el.style.display = 'none');
-            
-            const elementToCapture = document.getElementById('export-container');
-            
-            try {
-                const canvas = await html2canvas(elementToCapture, {
-                    scale: 2, 
-                    useCORS: true, 
-                    backgroundColor: '#f8fafc' 
-                });
-                
-                const link = document.createElement('a');
-                link.download = 'Checklist_Produksi_Pameran.jpg';
-                link.href = canvas.toDataURL('image/jpeg', 0.9);
-                link.click();
-                
-                showToast("Berhasil mengekspor layout menjadi JPG", "success");
-            } catch (err) {
-                console.error("Gagal export JPG:", err);
-                showToast("Terjadi kesalahan saat mengekspor gambar", "error");
-            } finally {
-                elementsToHide.forEach(el => el.style.display = '');
-            }
-        };
-
-        window.exportExcel = function() {
-            if (artworksData.length === 0) {
-                showToast("Tidak ada data untuk diekspor", "warning");
-                return;
-            }
-            
-            showToast("Menyiapkan file Excel beserta gambar...", "info");
-            
-            const lArtist = savedLabels['lblArtist'] || defaultLabels['lblArtist'];
-            const lTitle = savedLabels['lblTitle'] || defaultLabels['lblTitle'];
-            const lCat = savedLabels['lblCategory'] || defaultLabels['lblCategory'];
-            const lQty = savedLabels['lblQuantity'] || defaultLabels['lblQuantity'];
-            const lDim = savedLabels['lblDimensions'] || defaultLabels['lblDimensions'];
-            const lCond = savedLabels['lblCondition'] || defaultLabels['lblCondition'];
-            const lStat = savedLabels['lblStatus'] || defaultLabels['lblStatus'];
-            const lNote = savedLabels['lblNotes'] || defaultLabels['lblNotes'];
-
-            let tableHtml = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    table { border-collapse: collapse; width: 100%; font-family: sans-serif; }
-                    th { background-color: #0f172a; color: #ffffff; padding: 12px; font-size: 14px; text-align: left; border: 1px solid #cbd5e1; }
-                    td { padding: 10px; border: 1px solid #cbd5e1; vertical-align: top; font-size: 13px; color: #334155; }
-                    .img-cell { width: 140px; text-align: center; vertical-align: middle; }
-                    img { max-width: 120px; max-height: 120px; object-fit: cover; border-radius: 4px; }
-                    h2 { color: #0f172a; margin-bottom: 5px; }
-                    h4 { color: #3b82f6; margin-top: 0; margin-bottom: 20px; font-style: italic; }
-                </style>
-            </head>
-            <body>
-                <h2>Data Produksi Pameran</h2>
-                <h4>Checklist Data Custom</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Foto</th>
-                            <th>${lArtist} & ${lTitle}</th>
-                            <th>Detail (${lCat}, ${lQty}, ${lDim})</th>
-                            <th>${lCond}</th>
-                            <th>${lStat}</th>
-                            <th>${lNote}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            artworksData.forEach((item, index) => {
-                const imgTag = item.image ? `<img src="${item.image}">` : '<i>Tidak ada foto</i>';
-                tableHtml += `
-                    <tr>
-                        <td style="text-align: center; vertical-align: middle;">${index + 1}</td>
-                        <td class="img-cell">${imgTag}</td>
-                        <td>
-                            <strong style="font-size: 15px; color: #0f172a;">${item.title}</strong><br>
-                            <span style="color: #3b82f6;">${item.artist}</span>
-                        </td>
-                        <td>
-                            ${lCat}: <strong>${item.category}</strong><br>
-                            ${lQty}: ${item.quantity}<br>
-                            ${lDim}: ${item.dimensions || '-'}
-                        </td>
-                        <td>${item.condition}</td>
-                        <td>${item.status}</td>
-                        <td>${item.notes || '-'}</td>
-                    </tr>
                 `;
+                wrapper.insertAdjacentHTML('beforeend', newCat);
+                saveData();
+            }
+        });
+
+        async function exportToJPG() {
+            const btn = document.getElementById('btn-jpg');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+            
+            // Scroll ke atas agar tidak ada area hitam yang terpotong oleh html2canvas
+            window.scrollTo(0, 0);
+            
+            // Tambahkan class hide-for-export untuk menyembunyikan tombol UI dan mengatur ukuran area
+            document.body.classList.add('hide-for-export');
+            
+            // Beri waktu sejenak agar browser merender ulang layout (terutama pengaturan fixed width)
+            setTimeout(async () => {
+                try {
+                    const captureArea = document.getElementById('export-area');
+                    const canvas = await html2canvas(captureArea, {
+                        scale: 2, // Resolusi tinggi
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        windowWidth: 1000 // Paksa ukuran window untuk export konsisten
+                    });
+                    
+                    const link = document.createElement('a');
+                    link.download = 'Checklist_Rimpang_Digital.jpg';
+                    link.href = canvas.toDataURL('image/jpeg', 0.95);
+                    link.click();
+                } catch(err) {
+                    alert("Terjadi kesalahan saat mengekspor gambar: " + err);
+                } finally {
+                    // Kembalikan tampilan UI seperti semula
+                    document.body.classList.remove('hide-for-export');
+                    btn.innerHTML = originalText;
+                }
+            }, 300);
+        }
+
+        function exportToCSV() {
+            let csvData = [];
+            // Header Row
+            csvData.push("Kategori Tahapan,Status Penyelesaian,Deskripsi Pekerjaan / Modul,Quantity,Keterangan Tambahan");
+
+            const categories = document.querySelectorAll('.category-block');
+            categories.forEach(cat => {
+                let catTitleRaw = cat.querySelector('h3').innerText || "";
+                let catTitle = `"${catTitleRaw.replace(/"/g, '""')}"`;
+
+                const rows = cat.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    let isChecked = row.querySelector('.task-check').checked ? "SELESAI" : "BELUM";
+                    let desc = `"${row.cells[1].innerText.replace(/"/g, '""')}"`;
+                    let qty = `"${row.cells[2].innerText.replace(/"/g, '""')}"`;
+                    let note = `"${row.cells[3].innerText.replace(/"/g, '""')}"`;
+
+                    csvData.push(`${catTitle},${isChecked},${desc},${qty},${note}`);
+                });
             });
 
-            tableHtml += `</tbody></table></body></html>`;
-
-            try {
-                const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-                const link = document.createElement('a');
+            let csvContent = csvData.join("\n");
+            let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            let link = document.createElement("a");
+            
+            if (navigator.msSaveBlob) { 
+                navigator.msSaveBlob(blob, "Checklist_Rimpang_Digital.csv");
+            } else {
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Checklist_Data_dengan_Foto.xls';
+                link.download = "Checklist_Rimpang_Digital.csv";
+                link.style.display = "none";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
-                showToast("Berhasil mengekspor ke dokumen Excel", "success");
-            } catch (err) {
-                console.error("Gagal export Excel:", err);
-                showToast("Terjadi kesalahan saat mengekspor Excel", "error");
             }
-        };
+        }
+
+        function resetData() {
+            if (confirm("PERINGATAN: Anda yakin ingin menghapus SEMUA data yang sudah diedit (termasuk gambar) dan mengembalikannya ke template awal?")) {
+                localStorage.removeItem('rimpang-checklist-data');
+                location.reload();
+            }
+        }
+
+        // Menjalankan inisiasi saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
