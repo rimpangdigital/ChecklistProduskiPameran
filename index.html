@@ -59,6 +59,11 @@
             box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.2);
         }
 
+        /* Kelas khusus untuk menyembunyikan kategori saat ekspor parsial */
+        .temp-hide-export {
+            display: none !important;
+        }
+
         @media print {
             body { background-color: white !important; }
             .no-print { display: none !important; }
@@ -141,13 +146,14 @@
                 <i class="fas fa-circle-notch fa-spin mr-1"></i> Memuat AI...
             </span>
         </div>
-        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+        <!-- Tombol Ekspor sekarang memanggil modal terlebih dahulu -->
+        <button onclick="openExportModal('pdf')" class="bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
             <i class="fas fa-print mr-2"></i> Ekspor PDF
         </button>
-        <button onclick="exportToJPG()" id="btn-jpg" class="bg-purple-600 hover:bg-purple-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+        <button onclick="openExportModal('jpg')" id="btn-jpg" class="bg-purple-600 hover:bg-purple-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
             <i class="fas fa-image mr-2"></i> Ekspor JPG
         </button>
-        <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
+        <button onclick="openExportModal('csv')" class="bg-emerald-600 hover:bg-emerald-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
             <i class="fas fa-file-excel mr-2"></i> Ekspor CSV
         </button>
         <button onclick="openAlarmSettings()" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm relative">
@@ -171,6 +177,7 @@
         let tfObjectModel = null;
         let isAILoaded = false;
 
+        // Custom Confirm Dialog
         function showCustomConfirm(message, onConfirm) {
             const modalId = 'modal-' + Date.now();
             const modalHtml = `
@@ -196,6 +203,7 @@
             };
         }
 
+        // Toast Notification System
         function showToast(message, isError = false) {
             const toast = document.createElement('div');
             toast.className = `px-4 py-3 rounded shadow-lg text-white font-medium animate-fade-in-up flex items-center gap-2 ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
@@ -208,6 +216,132 @@
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
         }
+
+        function openExportModal(exportType) {
+            const categories = document.querySelectorAll('.category-block');
+            if (categories.length === 0) {
+                showToast("Tidak ada data kategori untuk diekspor.", true);
+                return;
+            }
+
+            let checkboxHtml = '';
+            categories.forEach((cat, index) => {
+                const titleEl = cat.querySelector('h3');
+                // Clean HTML tags from title for display
+                const titleText = titleEl ? titleEl.innerText.trim() : `Kategori ${index + 1}`;
+                cat.dataset.exportIdx = index; // Temp ID for matching
+                
+                checkboxHtml += `
+                    <label class="flex items-center space-x-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 rounded transition-colors">
+                        <input type="checkbox" class="export-cat-check w-5 h-5 text-blue-600 rounded focus:ring-blue-500" value="${index}" checked>
+                        <span class="text-sm font-medium text-slate-700 truncate">${titleText}</span>
+                    </label>
+                `;
+            });
+
+            const modalId = 'export-modal-' + Date.now();
+            const modalTitle = exportType === 'pdf' ? 'Ekspor ke PDF' : (exportType === 'jpg' ? 'Ekspor ke JPG' : 'Ekspor ke CSV');
+            
+            const modalHtml = `
+            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 bg-opacity-60 no-print animate-fade-in-up p-4">
+                <div class="bg-white rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
+                        <h4 class="text-lg font-bold"><i class="fas fa-tasks mr-2 text-blue-400"></i> Pilih Tahapan</h4>
+                        <span class="text-xs bg-slate-700 px-2 py-1 rounded">${modalTitle}</span>
+                    </div>
+                    <div class="p-4 text-sm text-slate-600 bg-slate-50 border-b">
+                        Pilih kategori/tahapan mana saja yang ingin Anda sertakan dalam file ekspor.
+                    </div>
+                    <div class="p-2 flex-1 overflow-y-auto">
+                        <div class="flex justify-between items-center p-2 mb-2 bg-slate-100 rounded">
+                            <span class="text-sm font-bold text-slate-700">Pilih Semua</span>
+                            <input type="checkbox" id="check-all-${modalId}" class="w-5 h-5 text-blue-600 rounded" checked>
+                        </div>
+                        <div class="space-y-1">
+                            ${checkboxHtml}
+                        </div>
+                    </div>
+                    <div class="p-4 border-t bg-slate-50 flex justify-end gap-3">
+                        <button id="cancel-${modalId}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md text-slate-800 font-medium transition-colors">Batal</button>
+                        <button id="exec-${modalId}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium transition-colors shadow-sm flex items-center">
+                            <i class="fas fa-file-export mr-2"></i> Lanjutkan Ekspor
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Handle Check All Toggle
+            const checkAllBtn = document.getElementById(`check-all-${modalId}`);
+            const individualChecks = document.querySelectorAll('.export-cat-check');
+            
+            checkAllBtn.addEventListener('change', (e) => {
+                individualChecks.forEach(chk => chk.checked = e.target.checked);
+            });
+
+            // If an individual check is unchecked, uncheck the "Check All" button
+            individualChecks.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    if (!chk.checked) checkAllBtn.checked = false;
+                    else {
+                        const allChecked = Array.from(individualChecks).every(c => c.checked);
+                        checkAllBtn.checked = allChecked;
+                    }
+                });
+            });
+
+            document.getElementById(`cancel-${modalId}`).onclick = () => document.getElementById(modalId).remove();
+            
+            document.getElementById(`exec-${modalId}`).onclick = async () => {
+                const checkedValues = Array.from(document.querySelectorAll('.export-cat-check:checked')).map(cb => cb.value);
+                
+                if (checkedValues.length === 0) {
+                    showToast("Harap pilih minimal 1 tahapan untuk diekspor.", true);
+                    return;
+                }
+
+                // Sembunyikan kategori yang tidak dipilih
+                categories.forEach(cat => {
+                    if (!checkedValues.includes(cat.dataset.exportIdx)) {
+                        cat.classList.add('temp-hide-export');
+                    }
+                });
+
+                document.getElementById(modalId).remove();
+
+                // Eksekusi fungsi ekspor spesifik
+                try {
+                    if (exportType === 'pdf') {
+                        window.print();
+                    } else if (exportType === 'jpg') {
+                        await exportToJPG_Core();
+                    } else if (exportType === 'csv') {
+                        exportToCSV_Core();
+                    }
+                } catch (error) {
+                    console.error("Export Error:", error);
+                    showToast("Terjadi kesalahan saat mengekspor data.", true);
+                } finally {
+                    // Jika PDF, pembersihan dilakukan oleh event 'afterprint'
+                    // Untuk JPG dan CSV, bersihkan langsung setelah selesai eksekusi (atau await selesai)
+                    if(exportType !== 'pdf') {
+                        cleanupExportHiding();
+                    }
+                }
+            };
+        }
+
+        // Membersihkan class temporary setelah ekspor
+        function cleanupExportHiding() {
+            document.querySelectorAll('.category-block').forEach(cat => {
+                cat.classList.remove('temp-hide-export');
+                delete cat.dataset.exportIdx; // Bersihkan data attribute
+            });
+        }
+
+        // Listener global untuk merestore tampilan setelah dialog Print OS ditutup
+        window.addEventListener('afterprint', cleanupExportHiding);
 
         async function analyzeImageRealAI(imgElement, rowCount) {
             let generatedData = [];
@@ -354,7 +488,7 @@
                 </button>
 
                 <div class="uploaded-image-wrapper hidden relative group w-full max-w-3xl mx-auto">
-                    <img src="" class="normal-image max-h-80 mx-auto rounded shadow-md object-contain border border-slate-200 hidden">
+                    <img src="" class="normal-image max-h-80 mx-auto rounded shadow-md object-contain border border-slate-200 hidden" crossorigin="anonymous">
                     
                     <div class="pdf-render-container hidden flex-col gap-3 w-full max-h-[600px] overflow-y-auto bg-slate-200/50 p-4 rounded border border-slate-300 shadow-inner">
                         <!-- PDF pages injected here -->
@@ -390,7 +524,7 @@
                     <div class="print-fallback text-center">
                          <i class="fas fa-cube text-4xl mb-3 text-slate-300"></i>
                          <p class="font-medium text-slate-500">Interactive 3D/Web Preview</p>
-                         <p class="text-xs mt-1 text-slate-400">(Tampilan interaktif disembunyikan dalam mode cetak demi keamanan rendering)</p>
+                         <p class="text-xs mt-1 text-slate-400">(Tampilan interaktif disembunyikan saat ekspor demi keamanan rendering)</p>
                     </div>
                 </div>
             </div>
@@ -562,7 +696,6 @@
                 const isHeic = fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic';
                 
                 try {
-                    // --- PDF PROCESSING FLOW ---
                     if (isPDF) {
                         if (typeof pdfjsLib === 'undefined') {
                             throw new Error("Pustaka PDF.js tidak dimuat dengan benar.");
@@ -614,7 +747,6 @@
 
                                 showToast("Dokumen PDF berhasil dimuat!");
 
-                                // Lakukan AI Analisis pada halaman pertama PDF!
                                 if (firstPageBase64) {
                                     const firstPageImg = new Image();
                                     firstPageImg.src = firstPageBase64;
@@ -632,7 +764,6 @@
                         return;
                     }
 
-                    // --- NORMAL IMAGE PROCESSING FLOW ---
                     if (isHeic) {
                         uploadBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin text-2xl mb-2 text-blue-500"></i><br><span class="text-sm font-medium text-blue-600">Konversi HEIC...</span>';
                         const convertedBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.8 });
@@ -655,7 +786,6 @@
                         uploadBtn.innerHTML = originalText;
                         e.target.value = ''; 
                         
-                        // Jalankan Analisis AI standar
                         processAIForImage(img, container);
                     });
 
@@ -694,7 +824,6 @@
                 saveData();
             }
 
-            // Bagian Logika Web/3D Embed
             if (e.target.closest('.add-embed-btn')) {
                 const wrapper = e.target.closest('.category-block').querySelector('.embed-list-wrapper');
                 wrapper.insertAdjacentHTML('beforeend', generateEmbedInputBlock());
@@ -830,38 +959,54 @@
             }
         }
 
-        async function exportToJPG() {
-            const btn = document.getElementById('btn-jpg');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
-            window.scrollTo(0, 0);
-            
-            // Terapkan penanda khusus sebelum eskpor untuk menyembunyikan iframe cross-origin secara aman
-            document.body.classList.add('hide-for-export');
-            
-            setTimeout(async () => {
-                try {
-                    const canvas = await html2canvas(document.getElementById('export-area'), {
-                        scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 1000 
-                    });
-                    const link = document.createElement('a');
-                    link.download = 'Checklist_Rimpang.jpg';
-                    link.href = canvas.toDataURL('image/jpeg', 0.95);
-                    link.click();
-                    showToast("JPG Berhasil diekspor!");
-                } catch(err) {
-                    showToast("Gagal mengekspor JPG. Silakan cek konsol browser.", true);
-                    console.error(err);
-                } finally {
-                    document.body.classList.remove('hide-for-export');
-                    btn.innerHTML = originalText;
-                }
-            }, 500); 
+        async function exportToJPG_Core() {
+            return new Promise((resolve, reject) => {
+                const btn = document.getElementById('btn-jpg');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
+                window.scrollTo(0, 0);
+                
+                document.body.classList.add('hide-for-export');
+                
+                setTimeout(async () => {
+                    try {
+                        const canvas = await html2canvas(document.getElementById('export-area'), {
+                            scale: 2, 
+                            useCORS: true, 
+                            logging: false, 
+                            backgroundColor: '#ffffff', 
+                            windowWidth: 1000 
+                        });
+                        const link = document.createElement('a');
+                        link.download = 'Checklist_Rimpang.jpg';
+                        link.href = canvas.toDataURL('image/jpeg', 0.95);
+                        link.click();
+                        showToast("JPG Berhasil diekspor!");
+                        resolve();
+                    } catch(err) {
+                        showToast("Gagal mengekspor JPG. Pastikan gambar berasal dari sumber yang aman (CORS).", true);
+                        console.error(err);
+                        reject(err);
+                    } finally {
+                        document.body.classList.remove('hide-for-export');
+                        btn.innerHTML = originalText;
+                    }
+                }, 500);
+            });
         }
 
-        function exportToCSV() {
+        function exportToCSV_Core() {
             let csvData = ["Kategori Tahapan,Status,Deskripsi Pekerjaan,Quantity,Keterangan"];
-            document.querySelectorAll('.category-block').forEach(cat => {
+            
+            // Hanya ambil kategori yang tidak disembunyikan (.temp-hide-export)
+            const activeCategories = document.querySelectorAll('.category-block:not(.temp-hide-export)');
+            
+            if (activeCategories.length === 0) {
+                showToast("Tidak ada data yang dipilih untuk diekspor ke CSV.", true);
+                return;
+            }
+
+            activeCategories.forEach(cat => {
                 let catTitle = `"${(cat.querySelector('h3').innerText || "").replace(/"/g, '""')}"`;
                 cat.querySelectorAll('tbody tr').forEach(row => {
                     let isChecked = row.querySelector('.task-check').checked ? "SELESAI" : "BELUM";
@@ -871,6 +1016,7 @@
                     csvData.push(`${catTitle},${isChecked},${desc},${qty},${note}`);
                 });
             });
+            
             let blob = new Blob([csvData.join("\n")], { type: "text/csv;charset=utf-8;" });
             let link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
