@@ -19,12 +19,20 @@
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 
     <!-- REAL AI LIBRARIES (Offline / No API Key) -->
-    <!-- TensorFlow.js Core -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
-    <!-- TensorFlow Object Detection (COCO-SSD) -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-    <!-- Tesseract.js for Text Recognition (OCR) -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.2/dist/tesseract.min.js"></script>
+
+    <!-- PDF.js untuk Penampil PDF Natif -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window['pdfjs-dist/build/pdf']) {
+            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+        }
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
 
     <style>
         body {
@@ -51,7 +59,6 @@
             box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.2);
         }
 
-        /* Print and Export Specific Styles */
         @media print {
             body { background-color: white !important; }
             .no-print { display: none !important; }
@@ -59,14 +66,22 @@
             .category-block { page-break-inside: avoid; break-inside: avoid; margin-bottom: 2rem; }
             .image-container:not(.has-image) { display: none !important; }
             
-            /* Embed 3D/Web Print Rules */
+            /* Expand PDF viewer for print */
+            .pdf-render-container {
+                max-height: none !important;
+                overflow: visible !important;
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            
             .embed-setup, .embed-header, .iframe-container iframe { display: none !important; }
             .print-fallback { display: flex !important; }
             
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
 
-        /* Fallback rule when exporting to JPG to prevent html2canvas cross-origin crashes */
         body.hide-for-export .no-print,
         body.hide-for-export .delete-col,
         body.hide-for-export .image-container:not(.has-image),
@@ -76,6 +91,15 @@
             display: none !important;
         }
         
+        body.hide-for-export .pdf-render-container {
+            max-height: none !important;
+            overflow: visible !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+
         body.hide-for-export .print-fallback { display: flex !important; }
         body.hide-for-export .table-responsive-wrapper { overflow: visible !important; }
         body.hide-for-export #export-area { width: 1000px !important; margin: 0 auto; }
@@ -135,18 +159,15 @@
         </button>
     </div>
 
-    <!-- Main Content Area -->
     <div id="main-wrapper" class="mt-32 md:mt-24 max-w-5xl mx-auto shadow-2xl relative bg-white">
         <div id="export-area" class="p-6 md:p-12 min-h-screen">
-            <!-- Dynamic Content -->
+            <!-- Dynamic Content Injected Here -->
         </div>
     </div>
 
-    <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 no-print"></div>
 
     <script>
-        // Global variables for Real AI Models
         let tfObjectModel = null;
         let isAILoaded = false;
 
@@ -188,7 +209,6 @@
             }, 4000);
         }
 
-        // Fungsi Penganalisis Gambar Terpadu (ML Murni + Kanvas Heuristik)
         async function analyzeImageRealAI(imgElement, rowCount) {
             let generatedData = [];
             const canvas = document.createElement('canvas');
@@ -197,7 +217,7 @@
             canvas.height = imgElement.naturalHeight || imgElement.height || 500;
             ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
-            // 1. Ekstrak Properti Fisik Gambar (Bentuk & Warna Dasar)
+            // 1. Ekstrak Fisik
             const isLandscape = canvas.width > canvas.height;
             const isSquare = Math.abs(canvas.width - canvas.height) < (canvas.width * 0.1);
             let r = 0, g = 0, b = 0, colorHex = "#FFFFFF", colorType = "Terang";
@@ -218,14 +238,13 @@
             } catch(e) { console.warn("Canvas color extraction failed", e); }
 
             const shapeStr = isSquare ? "Modul Simetris/Kubus" : (isLandscape ? "Modul Memanjang" : "Modul Vertikal Tinggi");
-            
             generatedData.push({
                 d: `[Fisik] Produksi Rangka ${shapeStr}`, 
                 q: "1 Set", 
                 n: `Area ${canvas.width}x${canvas.height}px. Finishing warna ${colorType} (${colorHex}).`
             });
 
-            // 2. Deteksi Objek via TensorFlow.js (COCO-SSD)
+            // 2. Deteksi Objek via TF
             if (tfObjectModel) {
                 try {
                     const predictions = await tfObjectModel.detect(imgElement);
@@ -252,19 +271,16 @@
                             generatedData.push({
                                 d: `[AI-Visual] Instalasi/Pemasangan ${objName.toUpperCase()}`,
                                 q: `${boxes.length} Unit`,
-                                n: `Deteksi AI: Proporsi ukuran ${ukuranLabel} (${avgWidth}x${avgHeight} px). Siapkan bracket/dudukan.`
+                                n: `Deteksi AI: Proporsi ukuran ${ukuranLabel}. Siapkan bracket jika perlu.`
                             });
                         }
                     }
                 } catch (e) { console.error("TF Object Detection error", e); }
             }
 
-            // 3. Optical Character Recognition (OCR) via Tesseract.js
+            // 3. OCR via Tesseract
             try {
-                const ocrResult = await Tesseract.recognize(imgElement, 'eng', {
-                    logger: m => {} 
-                });
-                
+                const ocrResult = await Tesseract.recognize(imgElement, 'eng', { logger: m => {} });
                 let textFound = ocrResult.data.text.replace(/\n/g, ' ').trim();
                 textFound = textFound.replace(/[^a-zA-Z0-9\s.,]/g, ''); 
 
@@ -278,10 +294,10 @@
                 }
             } catch (e) { console.error("Tesseract OCR error", e); }
 
-            // 4. Fallback jika baris masih kurang
+            // 4. Fallback
             let extraTasks = [
                 {d: "[Standar] Pekerjaan Penyesuaian Detail (Touch-up)", q: "Opsional", n: "Pengecekan sambungan/dempul modul utama."},
-                {d: "[Standar] Quality Control (QC) Akhir", q: "1 Lot", n: "Pastikan semua dimensi aktual sesuai dengan layout kerja."},
+                {d: "[Standar] Quality Control (QC) Akhir", q: "1 Lot", n: "Pastikan dimensi aktual sesuai."},
                 {d: "[Standar] Persiapan Jalur Elektrikal/Kabel", q: "1 Set", n: "Siapkan lubang stopkontak & saklar (jika ada lampu)."}
             ];
 
@@ -330,16 +346,21 @@
         function generateImageBlock(categoryId) {
             return `
             <div class="image-container p-4 bg-slate-50 border-x border-slate-300 relative text-center flex flex-col items-center justify-center min-h-[100px]">
-                <input type="file" class="hidden image-upload-input" accept="image/*,.heic,.heif" data-cat="${categoryId}">
+                <input type="file" class="hidden image-upload-input" accept="image/*,.heic,.heif,.pdf" data-cat="${categoryId}">
                 
                 <button class="trigger-upload-btn text-slate-400 hover:text-blue-500 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded p-4 w-full md:w-1/2 transition-colors no-print">
-                    <i class="fas fa-robot text-2xl mb-2 text-slate-400"></i><br>
-                    <span class="text-sm font-medium">Klik Upload Gambar & Biarkan AI Menganalisis Pekerjaan</span>
+                    <i class="fas fa-file-upload text-2xl mb-2 text-slate-400"></i><br>
+                    <span class="text-sm font-medium">Klik Upload Gambar / PDF & Biarkan AI Menganalisis</span>
                 </button>
 
-                <div class="uploaded-image-wrapper hidden relative group max-w-full">
-                    <img src="" class="max-h-80 rounded shadow-md object-contain border border-slate-200">
-                    <button class="remove-image-btn absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity no-print" title="Hapus Gambar">
+                <div class="uploaded-image-wrapper hidden relative group w-full max-w-3xl mx-auto">
+                    <img src="" class="normal-image max-h-80 mx-auto rounded shadow-md object-contain border border-slate-200 hidden">
+                    
+                    <div class="pdf-render-container hidden flex-col gap-3 w-full max-h-[600px] overflow-y-auto bg-slate-200/50 p-4 rounded border border-slate-300 shadow-inner">
+                        <!-- PDF pages injected here -->
+                    </div>
+
+                    <button class="remove-image-btn absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity no-print z-10" title="Hapus Berkas">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -347,7 +368,6 @@
             `;
         }
         
-        // Generator khusus untuk Blok Web/3D Preview (Sketchfab dll)
         function generateEmbedInputBlock() {
             return `
             <div class="embed-item-block border-x border-slate-300 relative bg-white border-t">
@@ -381,7 +401,7 @@
             <div class="text-center mb-8 pb-6 border-b-[3px] border-slate-800 relative">
                 <h1 contenteditable="true" class="text-3xl md:text-4xl font-bold text-slate-900 mb-2 uppercase tracking-wide">RIMPANG DIGITAL KREATIF</h1>
                 <h2 contenteditable="true" class="text-lg md:text-xl font-semibold text-slate-600">Checklist Produksi & Pemasangan Booth Pameran</h2>
-                <p contenteditable="true" class="text-sm text-slate-500 italic mt-1 no-print">(Semua teks, angka, dan gambar di dokumen ini dapat diedit)</p>
+                <p contenteditable="true" class="text-sm text-slate-500 italic mt-1 no-print">(Semua teks, angka, dan berkas di dokumen ini dapat diedit)</p>
                 
                 <div class="mt-6 flex flex-col md:flex-row justify-between text-sm text-slate-700 font-medium gap-4">
                     <div class="flex items-center gap-2">
@@ -459,6 +479,52 @@
             }, 500);
         }
 
+        async function processAIForImage(imgElement, container) {
+            const categoryBlock = container.closest('.category-block');
+            const tbody = categoryBlock.querySelector('tbody');
+            let rows = tbody.querySelectorAll('tr');
+            
+            if (rows.length === 0) {
+                for(let i=0; i<4; i++) tbody.insertAdjacentHTML('beforeend', generateRow());
+                rows = tbody.querySelectorAll('tr');
+            }
+            
+            rows.forEach(row => {
+                let divDesc = row.cells[1].querySelector('div');
+                let divQty = row.cells[2].querySelector('div');
+                let divNote = row.cells[3].querySelector('div');
+                divDesc.innerHTML = '<span class="text-purple-600 font-bold animate-pulse"><i class="fas fa-microchip mr-2"></i>Mesin AI & OCR Menganalisis...</span>';
+                divQty.innerHTML = '<span class="animate-pulse">...</span>';
+                divNote.innerHTML = '<span class="animate-pulse">...</span>';
+            });
+
+            showToast("Menganalisis konten visual menggunakan Machine Learning secara offline...");
+
+            if (!isAILoaded && !tfObjectModel) {
+                showToast("Menunggu Model AI dimuat sepenuhnya...", false);
+                await new Promise(r => setTimeout(r, 1500));
+            }
+
+            const aiResult = await analyzeImageRealAI(imgElement, rows.length);
+            
+            rows.forEach((row, index) => {
+                let divDesc = row.cells[1].querySelector('div');
+                let divQty = row.cells[2].querySelector('div');
+                let divNote = row.cells[3].querySelector('div');
+                
+                divDesc.className = "min-h-[1.5em] w-full text-indigo-900 font-semibold"; 
+                divNote.className = "min-h-[1.5em] w-full text-sm text-slate-700";
+                
+                let data = aiResult[index] || { d: "Pekerjaan Kustom", q: "-", n: "-" };
+                divDesc.innerText = data.d;
+                divQty.innerText = data.q;
+                divNote.innerText = data.n;
+            });
+
+            saveData();
+            showToast("Analisis AI Selesai! Checklist diperbarui.");
+        }
+
         mainContainer.addEventListener('input', (e) => saveData());
 
         mainContainer.addEventListener('change', async (e) => {
@@ -475,13 +541,98 @@
                 const container = e.target.closest('.image-container');
                 const uploadBtn = container.querySelector('.trigger-upload-btn');
                 const wrapper = container.querySelector('.uploaded-image-wrapper');
-                const img = container.querySelector('img');
+                
+                // Compatibility for old saved localstorage elements
+                let img = container.querySelector('.normal-image');
+                if (!img) {
+                    const oldImg = container.querySelector('img');
+                    if(oldImg) { oldImg.classList.add('normal-image'); img = oldImg; }
+                }
+
+                let pdfContainer = container.querySelector('.pdf-render-container');
+                if (!pdfContainer) {
+                    pdfContainer = document.createElement('div');
+                    pdfContainer.className = 'pdf-render-container hidden flex-col gap-3 w-full max-h-[600px] overflow-y-auto bg-slate-200/50 p-4 rounded border border-slate-300 shadow-inner';
+                    wrapper.insertBefore(pdfContainer, wrapper.querySelector('.remove-image-btn'));
+                }
+
                 const originalText = uploadBtn.innerHTML;
+                const fileName = file.name.toLowerCase();
+                const isPDF = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+                const isHeic = fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic';
                 
                 try {
-                    const fileName = file.name.toLowerCase();
-                    const isHeic = fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic';
+                    // --- PDF PROCESSING FLOW ---
+                    if (isPDF) {
+                        if (typeof pdfjsLib === 'undefined') {
+                            throw new Error("Pustaka PDF.js tidak dimuat dengan benar.");
+                        }
+                        
+                        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl mb-2 text-red-500"></i><br><span class="text-sm font-medium">Merender File PDF...</span>';
+                        
+                        const fileReader = new FileReader();
+                        fileReader.onload = async function() {
+                            try {
+                                const typedarray = new Uint8Array(this.result);
+                                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                                pdfContainer.innerHTML = ''; 
+                                
+                                // Limit memory & localstorage use by rendering up to 5 pages
+                                const numPages = Math.min(pdf.numPages, 5);
+                                let firstPageBase64 = null;
 
+                                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                                    const page = await pdf.getPage(pageNum);
+                                    const viewport = page.getViewport({scale: 1.5}); 
+                                    const canvas = document.createElement('canvas');
+                                    const ctx = canvas.getContext('2d');
+                                    canvas.height = viewport.height;
+                                    canvas.width = viewport.width;
+
+                                    await page.render({canvasContext: ctx, viewport: viewport}).promise;
+                                    const imgBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                                    
+                                    if (pageNum === 1) firstPageBase64 = imgBase64;
+                                    
+                                    const imgEl = document.createElement('img');
+                                    imgEl.src = imgBase64;
+                                    imgEl.className = 'w-full h-auto shadow bg-white border border-slate-300 rounded-sm mb-2';
+                                    pdfContainer.appendChild(imgEl);
+                                }
+
+                                if (pdf.numPages > 5) {
+                                    pdfContainer.insertAdjacentHTML('beforeend', `<div class="text-xs text-center text-slate-600 p-2 font-medium bg-slate-300/30 rounded">Hanya menampilkan 5 halaman pertama untuk stabilitas aplikasi.</div>`);
+                                }
+
+                                if(img) img.classList.add('hidden');
+                                pdfContainer.classList.remove('hidden');
+                                uploadBtn.classList.add('hidden');
+                                wrapper.classList.remove('hidden');
+                                container.classList.add('has-image');
+                                uploadBtn.innerHTML = originalText;
+                                e.target.value = '';
+
+                                showToast("Dokumen PDF berhasil dimuat!");
+
+                                // Lakukan AI Analisis pada halaman pertama PDF!
+                                if (firstPageBase64) {
+                                    const firstPageImg = new Image();
+                                    firstPageImg.src = firstPageBase64;
+                                    firstPageImg.onload = () => processAIForImage(firstPageImg, container);
+                                } else {
+                                    saveData();
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                showToast("Gagal memproses dokumen PDF.", true);
+                                uploadBtn.innerHTML = originalText;
+                            }
+                        };
+                        fileReader.readAsArrayBuffer(file);
+                        return;
+                    }
+
+                    // --- NORMAL IMAGE PROCESSING FLOW ---
                     if (isHeic) {
                         uploadBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin text-2xl mb-2 text-blue-500"></i><br><span class="text-sm font-medium text-blue-600">Konversi HEIC...</span>';
                         const convertedBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.8 });
@@ -490,62 +641,27 @@
                         uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl mb-2 text-purple-600"></i><br><span class="text-sm font-medium">Memproses gambar...</span>';
                     }
 
-                    compressImage(file, async (base64) => {
-                        img.src = base64;
-                        img.setAttribute('src', base64);
+                    compressImage(file, (base64) => {
+                        if(img) {
+                            img.src = base64;
+                            img.setAttribute('src', base64);
+                            img.classList.remove('hidden');
+                        }
+                        if (pdfContainer) pdfContainer.classList.add('hidden');
+                        
                         uploadBtn.classList.add('hidden');
                         wrapper.classList.remove('hidden');
                         container.classList.add('has-image');
                         uploadBtn.innerHTML = originalText;
                         e.target.value = ''; 
                         
-                        const categoryBlock = container.closest('.category-block');
-                        const tbody = categoryBlock.querySelector('tbody');
-                        let rows = tbody.querySelectorAll('tr');
-                        
-                        if (rows.length === 0) {
-                            for(let i=0; i<4; i++) tbody.insertAdjacentHTML('beforeend', generateRow());
-                            rows = tbody.querySelectorAll('tr');
-                        }
-                        
-                        rows.forEach(row => {
-                            let divDesc = row.cells[1].querySelector('div');
-                            let divQty = row.cells[2].querySelector('div');
-                            let divNote = row.cells[3].querySelector('div');
-                            divDesc.innerHTML = '<span class="text-purple-600 font-bold animate-pulse"><i class="fas fa-microchip mr-2"></i>Mesin AI & OCR Menganalisis Objek & Teks...</span>';
-                            divQty.innerHTML = '<span class="animate-pulse">...</span>';
-                            divNote.innerHTML = '<span class="animate-pulse">...</span>';
-                        });
-
-                        showToast("Menganalisis gambar menggunakan Machine Learning secara offline...");
-
-                        if (!isAILoaded && !tfObjectModel) {
-                            showToast("Menunggu Model AI dimuat sepenuhnya...", false);
-                            await new Promise(r => setTimeout(r, 1500));
-                        }
-
-                        const aiResult = await analyzeImageRealAI(img, rows.length);
-                        
-                        rows.forEach((row, index) => {
-                            let divDesc = row.cells[1].querySelector('div');
-                            let divQty = row.cells[2].querySelector('div');
-                            let divNote = row.cells[3].querySelector('div');
-                            
-                            divDesc.className = "min-h-[1.5em] w-full text-indigo-900 font-semibold"; 
-                            divNote.className = "min-h-[1.5em] w-full text-sm text-slate-700";
-                            
-                            let data = aiResult[index] || { d: "Pekerjaan Kustom", q: "-", n: "-" };
-                            divDesc.innerText = data.d;
-                            divQty.innerText = data.q;
-                            divNote.innerText = data.n;
-                        });
-
-                        saveData();
-                        showToast("Analisis AI Selesai! Checklist diperbarui.");
+                        // Jalankan Analisis AI standar
+                        processAIForImage(img, container);
                     });
+
                 } catch (err) {
-                    console.error("Gambar gagal diproses", err);
-                    showToast("Gagal memuat/menganalisis gambar.", true);
+                    console.error("Berkas gagal diproses", err);
+                    showToast("Gagal memuat/menganalisis berkas.", true);
                     uploadBtn.innerHTML = originalText;
                 }
             }
@@ -559,14 +675,26 @@
             if (e.target.closest('.remove-image-btn')) {
                 const btn = e.target.closest('.remove-image-btn');
                 const container = btn.closest('.image-container');
-                container.querySelector('img').removeAttribute('src');
+                
+                const img = container.querySelector('.normal-image') || container.querySelector('img');
+                if (img) {
+                    img.removeAttribute('src');
+                    img.classList.add('hidden');
+                }
+
+                const pdfContainer = container.querySelector('.pdf-render-container');
+                if(pdfContainer) {
+                    pdfContainer.innerHTML = '';
+                    pdfContainer.classList.add('hidden');
+                }
+
                 container.querySelector('.uploaded-image-wrapper').classList.add('hidden');
                 container.querySelector('.trigger-upload-btn').classList.remove('hidden');
                 container.classList.remove('has-image');
                 saveData();
             }
 
-            // --- BAGIAN LOGIKA WEB/3D EMBED ---
+            // Bagian Logika Web/3D Embed
             if (e.target.closest('.add-embed-btn')) {
                 const wrapper = e.target.closest('.category-block').querySelector('.embed-list-wrapper');
                 wrapper.insertAdjacentHTML('beforeend', generateEmbedInputBlock());
@@ -598,7 +726,6 @@
                 }
                 
                 let finalSrc = input;
-                // Heuristik parsing jika user menyalin utuh tag <iframe>
                 if (input.toLowerCase().startsWith('<iframe')) {
                     const match = input.match(/src\s*=\s*["']([^"']+)["']/i);
                     if (match) {
@@ -608,12 +735,9 @@
                         return;
                     }
                 } 
-                // Auto perbaiki link Sketchfab jika belum dalam mode embed
                 else if (input.includes('sketchfab.com') && !input.includes('/embed')) {
-                    finalSrc = input.replace(/\/$/, ''); // Hapus garis miring trailing jika ada
-                    if (!finalSrc.endsWith('/embed')) {
-                        finalSrc = finalSrc + '/embed';
-                    }
+                    finalSrc = input.replace(/\/$/, '');
+                    if (!finalSrc.endsWith('/embed')) finalSrc = finalSrc + '/embed';
                 }
 
                 if (!finalSrc.startsWith('http')) {
@@ -622,10 +746,8 @@
                 }
                 
                 const container = block.querySelector('.iframe-container');
-                // Setup iframe super aman (menggunakan atribut standard web modern)
                 container.innerHTML = `<iframe title="Interactive 3D/Web Preview" class="w-full h-full border-0 bg-white shadow-inner" src="${finalSrc}" allow="autoplay; fullscreen; xr-spatial-tracking" execution-while-out-of-viewport execution-while-not-rendered web-share allowfullscreen loading="lazy"></iframe>`;
                 
-                // Menukar tampilan DOM 
                 block.querySelector('.embed-setup').classList.add('hidden');
                 block.querySelector('.embed-preview').classList.remove('hidden');
                 
@@ -763,7 +885,6 @@
             });
         }
 
-        /* --- SISTEM ALARM --- */
         let alarmCheckTimer;
         let audioCtx; 
         
