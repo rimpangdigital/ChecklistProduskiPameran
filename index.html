@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist Produski Pameran by RIMPANG DIGITAL KREATIF</title>
+    <title>Checklist Produksi Pameran by RIMPANG DIGITAL KREATIF</title>
     
     <!-- Tailwind CSS untuk Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -77,7 +77,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold leading-tight">Checklist Produksi Pameran</h1>
-                    <p class="text-xs text-blue-300 font-medium tracking-wider">Data offline setiap device komputer/smartphone berbeda, baiknya setiap update produksi bisa langsung share ekspor jpg</p>
+                    <p class="text-xs text-blue-300 font-medium tracking-wider">Data offline setiap device komputer/smartphone berbeda, share ekspor file untuk sinkronisasi.</p>
                 </div>
             </div>
             
@@ -133,26 +133,17 @@
         <div id="controls-area" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
             <div class="relative w-full md:w-96">
                 <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="Cari nama seniman atau judul karya..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <input type="text" id="searchInput" placeholder="Cari berdasarkan nama atau judul..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             </div>
             
             <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                 <select id="filterCategory" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
                     <option value="">Semua Kategori</option>
-                    <option value="Lukisan">Lukisan</option>
-                    <option value="Patung">Patung</option>
-                    <option value="Instalasi">Instalasi</option>
-                    <option value="Video Art">Video Art</option>
-                    <option value="Fotografi">Fotografi</option>
-                    <option value="Media Campuran">Media Campuran</option>
-                    <option value="Lainnya">Lainnya</option>
+                    <!-- Options akan diisi dinamis oleh JavaScript -->
                 </select>
                 <select id="filterStatus" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
                     <option value="">Semua Status</option>
-                    <option value="Menunggu">Menunggu</option>
-                    <option value="Diterima">Diterima</option>
-                    <option value="Diinstalasi">Diinstalasi</option>
-                    <option value="Dikembalikan">Dikembalikan</option>
+                    <!-- Options akan diisi dinamis oleh JavaScript -->
                 </select>
             </div>
         </div>
@@ -197,68 +188,89 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <!-- Seniman -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Seniman <span class="text-red-500">*</span></label>
-                        <input type="text" id="inputArtist" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblArtist" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblArtist')" title="Klik untuk mengubah teks label">Nama Seniman</span> <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="inputArtist" list="artistList" autocomplete="off" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="...">
+                        <datalist id="artistList"></datalist>
                     </div>
                     <!-- Judul -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Judul Karya <span class="text-red-500">*</span></label>
-                        <input type="text" id="inputTitle" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblTitle" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblTitle')" title="Klik untuk mengubah teks label">Judul Karya</span> <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="inputTitle" list="titleList" autocomplete="off" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" placeholder="...">
+                        <datalist id="titleList"></datalist>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <!-- Kategori -->
+                    <!-- Kategori (Diperbarui menjadi Datalist agar bebas diubah) -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
-                        <select id="inputCategory" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                            <option value="Lukisan">Lukisan</option>
-                            <option value="Patung">Patung</option>
-                            <option value="Instalasi">Instalasi</option>
-                            <option value="Video Art">Video Art</option>
-                            <option value="Fotografi">Fotografi</option>
-                            <option value="Media Campuran">Media Campuran</option>
-                            <option value="Lainnya">Lainnya</option>
-                        </select>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblCategory" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblCategory')" title="Klik untuk mengubah teks label">Kategori</span> <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="inputCategory" list="categoryList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                        <datalist id="categoryList">
+                            <option value="Lukisan"></option>
+                            <option value="Patung"></option>
+                            <option value="Instalasi"></option>
+                            <option value="Video Art"></option>
+                            <option value="Fotografi"></option>
+                            <option value="Media Campuran"></option>
+                            <option value="Lainnya"></option>
+                        </datalist>
                     </div>
                     <!-- Jumlah -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Jumlah Item <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblQuantity" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblQuantity')" title="Klik untuk mengubah teks label">Jumlah Item</span> <span class="text-red-500">*</span>
+                        </label>
                         <input type="number" id="inputQuantity" min="1" value="1" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                     </div>
                     <!-- Dimensi -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Dimensi/Ukuran</label>
-                        <input type="text" id="inputDimensions" placeholder="P x L x T (cm)" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblDimensions" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblDimensions')" title="Klik untuk mengubah teks label">Dimensi/Ukuran</span>
+                        </label>
+                        <input type="text" id="inputDimensions" autocomplete="off" placeholder="P x L x T (cm)" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <!-- Kondisi -->
+                    <!-- Kondisi (Diperbarui menjadi Datalist agar bebas diubah) -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Kondisi Fisik <span class="text-red-500">*</span></label>
-                        <select id="inputCondition" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                            <option value="Sangat Baik">Sangat Baik</option>
-                            <option value="Baik">Baik</option>
-                            <option value="Perlu Perbaikan">Perlu Perbaikan</option>
-                            <option value="Rusak">Rusak</option>
-                        </select>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblCondition" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblCondition')" title="Klik untuk mengubah teks label">Kondisi Fisik</span> <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="inputCondition" list="conditionList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                        <datalist id="conditionList">
+                            <option value="Sangat Baik"></option>
+                            <option value="Baik"></option>
+                            <option value="Perlu Perbaikan"></option>
+                            <option value="Rusak"></option>
+                        </datalist>
                     </div>
-                    <!-- Status -->
+                    <!-- Status (Diperbarui menjadi Datalist agar bebas diubah) -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Status Logistik <span class="text-red-500">*</span></label>
-                        <select id="inputStatus" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
-                            <option value="Menunggu">Menunggu kedatangan</option>
-                            <option value="Diterima">Sudah Diterima</option>
-                            <option value="Diinstalasi">Sedang/Sudah Diinstalasi</option>
-                            <option value="Dikembalikan">Dikembalikan</option>
-                        </select>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">
+                            <span id="lblStatus" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblStatus')" title="Klik untuk mengubah teks label">Status Logistik</span> <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="inputStatus" list="statusList" autocomplete="off" required placeholder="Pilih atau ketik baru..." class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                        <datalist id="statusList">
+                            <option value="Menunggu"></option>
+                            <option value="Diterima"></option>
+                            <option value="Diinstalasi"></option>
+                            <option value="Dikembalikan"></option>
+                        </datalist>
                     </div>
                 </div>
 
                 <!-- Foto Karya -->
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Foto Karya (Utuh)</label>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">
+                        <span id="lblImage" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblImage')" title="Klik untuk mengubah teks label">Foto Karya (Utuh)</span>
+                    </label>
                     <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-blue-500 transition relative overflow-hidden group" id="dropZone">
                         <div class="space-y-1 text-center" id="uploadPlaceholder">
                             <i class="fa-regular fa-image text-4xl text-slate-400 mb-2"></i>
@@ -280,8 +292,10 @@
 
                 <!-- Keterangan Tambahan -->
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
-                    <textarea id="inputNotes" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"></textarea>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">
+                        <span id="lblNotes" contenteditable="true" class="focus:outline-blue-500 rounded px-1 -ml-1 border border-transparent hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-text" onblur="saveLabel('lblNotes')" title="Klik untuk mengubah teks label">Catatan Tambahan</span>
+                    </label>
+                    <textarea id="inputNotes" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none" placeholder="..."></textarea>
                 </div>
 
                 <!-- Action Buttons -->
@@ -330,7 +344,7 @@
     </div>
 
     <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Logika Aplikasi -->
     <script type="module">
@@ -343,14 +357,9 @@
         let firebaseConfig = null;
         let customToken = null;
 
-        // Mengecek ketersediaan konfigurasi Firebase (Aman jika diupload ke GitHub)
         try {
-            if (typeof __firebase_config !== 'undefined') {
-                firebaseConfig = JSON.parse(__firebase_config);
-            }
-            if (typeof __initial_auth_token !== 'undefined') {
-                customToken = __initial_auth_token;
-            }
+            if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+            if (typeof __initial_auth_token !== 'undefined') customToken = __initial_auth_token;
         } catch (e) { 
             console.warn("Menjalankan versi lokal tanpa Firebase."); 
         }
@@ -358,29 +367,57 @@
         let db, auth, currentUser;
         let artworksData = [];
         let currentEditId = null;
-        let base64Image = null; // Menyimpan gambar yang diupload
+        let base64Image = null; 
         
-        // Konstanta Nama Local Storage
         const LOCAL_STORAGE_KEY = 'jb2026_artworks_data';
+        const LABELS_STORAGE_KEY = 'jb2026_custom_labels';
+        
+        const savedLabels = JSON.parse(localStorage.getItem(LABELS_STORAGE_KEY) || '{}');
+        const defaultLabels = {
+            'lblArtist': 'Nama Seniman',
+            'lblTitle': 'Judul Karya',
+            'lblCategory': 'Kategori',
+            'lblQuantity': 'Jumlah Item',
+            'lblDimensions': 'Dimensi/Ukuran',
+            'lblCondition': 'Kondisi Fisik',
+            'lblStatus': 'Status Logistik',
+            'lblImage': 'Foto Karya (Utuh)',
+            'lblNotes': 'Catatan Tambahan'
+        };
 
-        // Helper untuk menghasilkan ID Unik
+        function loadCustomLabels() {
+            for (const [id, defaultText] of Object.entries(defaultLabels)) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = savedLabels[id] || defaultText;
+                }
+            }
+        }
+
+        window.saveLabel = function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                savedLabels[id] = el.textContent.trim() || defaultLabels[id];
+                if (!el.textContent.trim()) el.textContent = defaultLabels[id];
+                localStorage.setItem(LABELS_STORAGE_KEY, JSON.stringify(savedLabels));
+            }
+        }
+
         function generateUniqueId() {
             return typeof crypto !== 'undefined' && crypto.randomUUID 
                 ? crypto.randomUUID() 
                 : 'id-' + Math.random().toString(36).substring(2, 9) + Date.now();
         }
 
-        // Fungsi Simpan ke Local Storage (Pencegah Data Hilang Saat Refresh)
         function saveToLocalStorage() {
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(artworksData));
             } catch (e) {
-                console.error("Gagal menyimpan ke LocalStorage (Mungkin kuota penuh):", e);
-                showToast("Peringatan: Gagal menyimpan gambar ke penyimpanan lokal. Ukuran terlalu besar.", "warning");
+                console.error("Gagal menyimpan ke LocalStorage:", e);
+                showToast("Peringatan: Gagal menyimpan gambar lokal. Ukuran memori browser penuh.", "warning");
             }
         }
 
-        // Fungsi Muat dari Local Storage
         function loadFromLocalStorage() {
             const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (savedData) {
@@ -391,11 +428,11 @@
                     artworksData = [];
                 }
             }
+            updateDynamicFilters();
             renderArtworks();
             updateStats();
         }
 
-        // Inisialisasi Aplikasi (Firebase atau Offline/Local Storage)
         if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -413,7 +450,8 @@
         function initOfflineMode() {
             showToast("Mode Offline Aktif. Data tersimpan aman di browser Anda.", "info");
             document.getElementById('loadingState').classList.add('hidden');
-            loadFromLocalStorage(); // Memuat data yang tersimpan agar tidak hilang saat refresh
+            loadCustomLabels();
+            loadFromLocalStorage();
         }
 
         async function initAuth() {
@@ -435,6 +473,8 @@
         function setupRealtimeListener() {
             if (!currentUser) return;
             
+            loadCustomLabels();
+            
             const artworksRef = collection(db, 'artifacts', appId, 'public', 'data', 'artworks');
             const q = query(artworksRef);
 
@@ -444,9 +484,8 @@
                     artworksData.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Backup sinkronisasi Firebase ke Local Storage
                 saveToLocalStorage();
-                
+                updateDynamicFilters();
                 renderArtworks();
                 updateStats();
                 document.getElementById('loadingState').classList.add('hidden');
@@ -457,7 +496,6 @@
             });
         }
 
-        // Menangani input file gambar
         const imgInput = document.getElementById('inputImage');
         const formImgPreview = document.getElementById('formImagePreview');
         const uploadPlaceholder = document.getElementById('uploadPlaceholder');
@@ -466,7 +504,6 @@
         imgInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                // Kompresi ketat untuk menghemat kuota memori/LocalStorage
                 compressImage(file, 600, 600, 0.7).then(base64 => {
                     base64Image = base64;
                     showImagePreview(base64);
@@ -494,7 +531,6 @@
 
         removeImgBtn.addEventListener('click', clearImagePreview);
 
-        // Fungsi Kompresi Gambar menggunakan Canvas
         function compressImage(file, maxWidth, maxHeight, quality) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -526,13 +562,48 @@
                         
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
-                    img.onerror = () => reject(new Error("Gagal meload gambar untuk dikompresi"));
+                    img.onerror = () => reject(new Error("Gagal meload gambar"));
                 };
                 reader.onerror = error => reject(error);
             });
         }
 
-        // Modal Form Handling
+        // --- UPDATE FILTER DINAMIS ---
+        // Supaya jika user mengetik Kategori / Status baru yang custom, filter utama otomatis punya opsinya
+        function updateDynamicFilters() {
+            const filterCat = document.getElementById('filterCategory');
+            const filterStat = document.getElementById('filterStatus');
+
+            const currentCat = filterCat.value;
+            const currentStat = filterStat.value;
+
+            // Kumpulkan opsi bawaan + opsi unik hasil custom input user
+            const defaultCats = ['Lukisan', 'Patung', 'Instalasi', 'Video Art', 'Fotografi', 'Media Campuran', 'Lainnya'];
+            const defaultStats = ['Menunggu', 'Diterima', 'Diinstalasi', 'Dikembalikan'];
+
+            const allCategories = [...new Set([...defaultCats, ...artworksData.map(a => a.category).filter(Boolean)])];
+            const allStatuses = [...new Set([...defaultStats, ...artworksData.map(a => a.status).filter(Boolean)])];
+
+            filterCat.innerHTML = '<option value="">Semua Kategori</option>' + allCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+            filterStat.innerHTML = '<option value="">Semua Status</option>' + allStatuses.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Kembalikan nilai filter yang sedang terpilih agar tidak reset saat update realtime
+            filterCat.value = currentCat || "";
+            filterStat.value = currentStat || "";
+            
+            // Update Datalists untuk Nama & Judul (Autocomplete berbasis data yang ada)
+            const artistList = document.getElementById('artistList');
+            const titleList = document.getElementById('titleList');
+            if(artistList) {
+                const artists = [...new Set(artworksData.map(a => a.artist).filter(Boolean))];
+                artistList.innerHTML = artists.map(a => `<option value="${a}"></option>`).join('');
+            }
+            if(titleList) {
+                const titles = [...new Set(artworksData.map(a => a.title).filter(Boolean))];
+                titleList.innerHTML = titles.map(t => `<option value="${t}"></option>`).join('');
+            }
+        }
+
         window.openFormModal = function(editId = null) {
             currentEditId = editId;
             const modal = document.getElementById('formModal');
@@ -581,7 +652,6 @@
             }, 300);
         }
 
-        // Menyimpan Data
         document.getElementById('artworkForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -593,11 +663,11 @@
             const newArtwork = {
                 artist: document.getElementById('inputArtist').value.trim(),
                 title: document.getElementById('inputTitle').value.trim(),
-                category: document.getElementById('inputCategory').value,
+                category: document.getElementById('inputCategory').value.trim(), // Mendukung Teks Bebas
                 quantity: parseInt(document.getElementById('inputQuantity').value) || 1,
                 dimensions: document.getElementById('inputDimensions').value.trim(),
-                condition: document.getElementById('inputCondition').value,
-                status: document.getElementById('inputStatus').value,
+                condition: document.getElementById('inputCondition').value.trim(), // Mendukung Teks Bebas
+                status: document.getElementById('inputStatus').value.trim(),       // Mendukung Teks Bebas
                 notes: document.getElementById('inputNotes').value.trim(),
                 image: base64Image,
                 updatedAt: new Date().toISOString()
@@ -605,18 +675,13 @@
 
             try {
                 const idToSave = currentEditId || generateUniqueId();
-                
-                if (!currentEditId) {
-                    newArtwork.createdAt = new Date().toISOString();
-                }
+                if (!currentEditId) newArtwork.createdAt = new Date().toISOString();
 
-                // Coba simpan ke Firebase jika aktif
                 if (db && currentUser) {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'artworks', idToSave);
                     await setDoc(docRef, newArtwork, { merge: true });
                     showToast(currentEditId ? "Data diperbarui di server" : "Karya baru ditambahkan", "success");
                 } else {
-                    // Fallback In-memory / LocalStorage Murni (Penting untuk GitHub Pages)
                     newArtwork.id = idToSave;
                     if (currentEditId) {
                         const idx = artworksData.findIndex(a => a.id === currentEditId);
@@ -625,7 +690,8 @@
                         artworksData.push(newArtwork);
                     }
                     
-                    saveToLocalStorage(); // Wajib: Simpan ke local storage agar tidak hilang saat di-refresh
+                    saveToLocalStorage();
+                    updateDynamicFilters();
                     renderArtworks();
                     updateStats();
                     showToast(currentEditId ? "Data lokal diperbarui" : "Karya lokal ditambahkan", "success");
@@ -641,7 +707,6 @@
             }
         });
 
-        // Menghapus Data
         window.deleteArtwork = async function(id) {
             const artwork = artworksData.find(a => a.id === id);
             if (!artwork) return;
@@ -657,9 +722,9 @@
                             showToast("Gagal menghapus dari server", "error");
                         }
                     } else {
-                        // Penghapusan Lokal
                         artworksData = artworksData.filter(a => a.id !== id);
-                        saveToLocalStorage(); // Update ke storage browser
+                        saveToLocalStorage();
+                        updateDynamicFilters();
                         renderArtworks();
                         updateStats();
                         showToast("Karya dihapus secara lokal", "success");
@@ -668,7 +733,6 @@
             );
         }
 
-        // Render & Filter Logic
         function renderArtworks() {
             const grid = document.getElementById('artworkGrid');
             const emptyState = document.getElementById('emptyState');
@@ -699,41 +763,37 @@
             }
         }
 
-        // Event Listener untuk Search & Filter
         document.getElementById('searchInput').addEventListener('input', renderArtworks);
         document.getElementById('filterCategory').addEventListener('change', renderArtworks);
         document.getElementById('filterStatus').addEventListener('change', renderArtworks);
 
-        // Helper untuk UI Kartu
+        // Styling Dinamis yang mendukung teks kustom (mencari kata kunci kemiripan text string)
         function getConditionColor(condition) {
-            switch(condition) {
-                case 'Sangat Baik': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-                case 'Baik': return 'bg-blue-100 text-blue-700 border-blue-200';
-                case 'Perlu Perbaikan': return 'bg-amber-100 text-amber-700 border-amber-200';
-                case 'Rusak': return 'bg-red-100 text-red-700 border-red-200';
-                default: return 'bg-slate-100 text-slate-700 border-slate-200';
-            }
+            const c = condition?.toLowerCase() || '';
+            if (c.includes('sangat baik')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            if (c.includes('baik')) return 'bg-blue-100 text-blue-700 border-blue-200';
+            if (c.includes('perbaikan') || c.includes('kurang')) return 'bg-amber-100 text-amber-700 border-amber-200';
+            if (c.includes('rusak') || c.includes('hancur')) return 'bg-red-100 text-red-700 border-red-200';
+            return 'bg-slate-100 text-slate-700 border-slate-200';
         }
 
         function getStatusColor(status) {
-            switch(status) {
-                case 'Menunggu': return 'bg-slate-100 text-slate-600';
-                case 'Diterima': return 'bg-emerald-500 text-white shadow-emerald-200';
-                case 'Diinstalasi': return 'bg-blue-500 text-white shadow-blue-200';
-                case 'Dikembalikan': return 'bg-purple-500 text-white shadow-purple-200';
-                default: return 'bg-slate-200 text-slate-800';
-            }
+            const s = status?.toLowerCase() || '';
+            if (s.includes('menunggu')) return 'bg-slate-100 text-slate-600';
+            if (s.includes('terima')) return 'bg-emerald-500 text-white shadow-emerald-200';
+            if (s.includes('instalasi')) return 'bg-blue-500 text-white shadow-blue-200';
+            if (s.includes('kembali')) return 'bg-purple-500 text-white shadow-purple-200';
+            return 'bg-slate-600 text-white shadow-slate-200';
         }
 
         function createCardElement(item) {
             const div = document.createElement('div');
             div.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group transition hover:shadow-md";
             
-            // Image area
             const imgArea = document.createElement('div');
             imgArea.className = "h-56 w-full bg-slate-100 relative cursor-zoom-in overflow-hidden border-b border-slate-100";
             
-            const imgUrl = item.image || `https://placehold.co/600x400/f1f5f9/64748b?text=Tidak+Ada+Foto\\n${item.category}`;
+            const imgUrl = item.image || `https://placehold.co/600x400/f1f5f9/64748b?text=Tidak+Ada+Foto\\n${encodeURIComponent(item.category)}`;
             
             imgArea.innerHTML = `
                 <img src="${imgUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
@@ -750,7 +810,6 @@
             imgArea.onclick = () => openZoomModal(imgUrl, item.title, item.artist);
             div.appendChild(imgArea);
 
-            // Content area
             const content = document.createElement('div');
             content.className = "p-5 flex-1 flex flex-col";
             content.innerHTML = `
@@ -777,7 +836,6 @@
             `;
             div.appendChild(content);
 
-            // Actions area
             const actions = document.createElement('div');
             actions.className = "px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center no-print export-hide";
             actions.innerHTML = `
@@ -798,12 +856,11 @@
 
         function updateStats() {
             document.getElementById('stat-total').textContent = artworksData.length;
-            document.getElementById('stat-received').textContent = artworksData.filter(a => a.status === 'Diterima').length;
-            document.getElementById('stat-repair').textContent = artworksData.filter(a => a.condition === 'Rusak' || a.condition === 'Perlu Perbaikan').length;
-            document.getElementById('stat-installed').textContent = artworksData.filter(a => a.status === 'Diinstalasi').length;
+            document.getElementById('stat-received').textContent = artworksData.filter(a => a.status?.toLowerCase().includes('terima')).length;
+            document.getElementById('stat-repair').textContent = artworksData.filter(a => a.condition?.toLowerCase().includes('rusak') || a.condition?.toLowerCase().includes('perbaikan')).length;
+            document.getElementById('stat-installed').textContent = artworksData.filter(a => a.status?.toLowerCase().includes('instalasi')).length;
         }
 
-        // Logic Zoom Image Layar Penuh
         const zoomModal = document.getElementById('zoomModal');
         const zoomImg = document.getElementById('zoom-image-container');
         const zoomLevelText = document.getElementById('zoomLevelIndicator');
@@ -847,28 +904,17 @@
         }
         
         window.resetZoom = resetZoomLogic;
+        window.handleZoomIn = function() { if (zScale < 5) { zScale += scaleStep; applyZoomTransform(); } }
+        window.handleZoomOut = function() { if (zScale > 0.5) { zScale -= scaleStep; applyZoomTransform(); } }
 
-        window.handleZoomIn = function() {
-            if (zScale < 5) { zScale += scaleStep; applyZoomTransform(); }
-        }
-
-        window.handleZoomOut = function() {
-            if (zScale > 0.5) { zScale -= scaleStep; applyZoomTransform(); }
-        }
-
-        // Mouse Wheel Zoom
         const zoomWrapper = document.getElementById('zoomContainerWrapper');
         zoomWrapper.addEventListener('wheel', (e) => {
             e.preventDefault();
-            if (e.deltaY < 0 && zScale < 5) {
-                zScale += scaleStep;
-            } else if (e.deltaY > 0 && zScale > 0.5) {
-                zScale -= scaleStep;
-            }
+            if (e.deltaY < 0 && zScale < 5) { zScale += scaleStep; } 
+            else if (e.deltaY > 0 && zScale > 0.5) { zScale -= scaleStep; }
             applyZoomTransform();
         });
 
-        // Mouse Drag / Panning
         zoomImg.addEventListener('mousedown', (e) => {
             e.preventDefault(); 
             isDragging = true;
@@ -883,11 +929,8 @@
             applyZoomTransform();
         });
 
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
 
-        // Touch Panning
         let touchStartX, touchStartY;
         zoomImg.addEventListener('touchstart', (e) => {
             if(e.touches.length === 1) {
@@ -907,7 +950,7 @@
 
         zoomImg.addEventListener('touchend', () => { isDragging = false; });
 
-        // Toast Notification System
+        // --- SISTEM TOAST & KONFIRMASI ---
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -919,22 +962,18 @@
             else if (type === 'error') { color = 'bg-red-600 text-white'; icon = 'fa-exclamation-triangle'; }
             else if (type === 'warning') { color = 'bg-amber-500 text-white'; icon = 'fa-exclamation-circle'; }
 
-            toast.className = `${color} px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 font-medium text-sm border border-black/10 max-w-sm`;
+            toast.className = `${color} px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 font-medium text-sm border border-black/10 max-w-sm pointer-events-auto`;
             toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${message}</span>`;
             
             container.appendChild(toast);
             
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Custom Confirm via Toast
         function createCustomConfirm(message, onConfirm) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -957,7 +996,6 @@
             `;
             
             container.appendChild(toast);
-            
             setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
 
             const removeToast = () => {
@@ -972,9 +1010,7 @@
             };
         }
 
-        window.exportPrint = function() {
-            window.print();
-        };
+        window.exportPrint = function() { window.print(); };
 
         window.exportJPG = async function() {
             if (artworksData.length === 0) {
@@ -997,7 +1033,7 @@
                 });
                 
                 const link = document.createElement('a');
-                link.download = 'Jakarta_Biennale_2026_Checklist.jpg';
+                link.download = 'Checklist_Produksi_Pameran.jpg';
                 link.href = canvas.toDataURL('image/jpeg', 0.9);
                 link.click();
                 
@@ -1018,6 +1054,15 @@
             
             showToast("Menyiapkan file Excel beserta gambar...", "info");
             
+            const lArtist = savedLabels['lblArtist'] || defaultLabels['lblArtist'];
+            const lTitle = savedLabels['lblTitle'] || defaultLabels['lblTitle'];
+            const lCat = savedLabels['lblCategory'] || defaultLabels['lblCategory'];
+            const lQty = savedLabels['lblQuantity'] || defaultLabels['lblQuantity'];
+            const lDim = savedLabels['lblDimensions'] || defaultLabels['lblDimensions'];
+            const lCond = savedLabels['lblCondition'] || defaultLabels['lblCondition'];
+            const lStat = savedLabels['lblStatus'] || defaultLabels['lblStatus'];
+            const lNote = savedLabels['lblNotes'] || defaultLabels['lblNotes'];
+
             let tableHtml = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
@@ -1033,18 +1078,18 @@
                 </style>
             </head>
             <body>
-                <h2>Jakarta Biennale 2026</h2>
-                <h4>'KEBAL' - Checklist Karya Seniman</h4>
+                <h2>Data Produksi Pameran</h2>
+                <h4>Checklist Data Custom</h4>
                 <table>
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Foto Karya</th>
-                            <th>Seniman & Judul</th>
-                            <th>Detail (Kategori, Qty, Dimensi)</th>
-                            <th>Kondisi Fisik</th>
-                            <th>Status Logistik</th>
-                            <th>Catatan Tambahan</th>
+                            <th>Foto</th>
+                            <th>${lArtist} & ${lTitle}</th>
+                            <th>Detail (${lCat}, ${lQty}, ${lDim})</th>
+                            <th>${lCond}</th>
+                            <th>${lStat}</th>
+                            <th>${lNote}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1052,7 +1097,6 @@
 
             artworksData.forEach((item, index) => {
                 const imgTag = item.image ? `<img src="${item.image}">` : '<i>Tidak ada foto</i>';
-                
                 tableHtml += `
                     <tr>
                         <td style="text-align: center; vertical-align: middle;">${index + 1}</td>
@@ -1062,9 +1106,9 @@
                             <span style="color: #3b82f6;">${item.artist}</span>
                         </td>
                         <td>
-                            Kategori: <strong>${item.category}</strong><br>
-                            Jumlah: ${item.quantity}<br>
-                            Dimensi: ${item.dimensions || '-'}
+                            ${lCat}: <strong>${item.category}</strong><br>
+                            ${lQty}: ${item.quantity}<br>
+                            ${lDim}: ${item.dimensions || '-'}
                         </td>
                         <td>${item.condition}</td>
                         <td>${item.status}</td>
@@ -1073,18 +1117,13 @@
                 `;
             });
 
-            tableHtml += `
-                    </tbody>
-                </table>
-            </body>
-            </html>
-            `;
+            tableHtml += `</tbody></table></body></html>`;
 
             try {
                 const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Checklist_JB_2026_dengan_Foto.xls';
+                link.download = 'Checklist_Data_dengan_Foto.xls';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1095,7 +1134,6 @@
                 showToast("Terjadi kesalahan saat mengekspor Excel", "error");
             }
         };
-
     </script>
 </body>
 </html>
