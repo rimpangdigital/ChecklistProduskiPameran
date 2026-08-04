@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist JB 2026 'KEBAL'</title>
+    
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Ekspor Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Zoom Modal Image Container */
+        #zoom-image-container {
+            cursor: grab;
+            transition: transform 0.1s ease-out;
+            transform-origin: center center;
+        }
+        #zoom-image-container:active {
+            cursor: grabbing;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Print Styles: Membersihkan UI berlebih saat dicetak */
+        @media print {
+            body { background-color: #fff; }
+            header, #controls-area, .no-print, #toastContainer, #formModal, #zoomModal { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+            .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 1rem !important; }
+            .bg-white { border: 1px solid #e2e8f0 !important; box-shadow: none !important; page-break-inside: avoid; }
+            #artworkGrid { display: grid !important; }
+            #loadingState, #emptyState { display: none !important; }
+            .h-56 { height: 180px !important; } /* Mengubah tinggi foto saat di-print */
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Wrapper khusus ekspor JPG agar Header ikut ter-capture -->
+    <div id="export-container" class="flex flex-col min-h-screen bg-[#f8fafc]">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-xl font-bold shadow-sm">
+                    JB
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">Jakarta Biennale 2026</h1>
+                    <p class="text-xs text-blue-300 font-medium tracking-wider">'KEBAL' - Checklist Karya Seniman</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 export-hide">
+                <!-- Export Menu -->
+                <button onclick="exportPrint()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Print Data">
+                    <i class="fa-solid fa-print"></i> <span class="hidden md:inline">Print</span>
+                </button>
+                <button onclick="exportJPG()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Export JPG">
+                    <i class="fa-solid fa-file-image"></i> <span class="hidden md:inline">JPG</span>
+                </button>
+                <button onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm" title="Export Excel">
+                    <i class="fa-solid fa-file-excel"></i> <span class="hidden md:inline">Excel</span>
+                </button>
+                
+                <div class="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
+                
+                <!-- Action Buttons -->
+                <button onclick="openFormModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center gap-2 rounded-lg font-medium transition shadow-sm text-sm sm:text-base hidden sm:flex">
+                    <i class="fa-solid fa-plus"></i> Tambah Karya
+                </button>
+                <button onclick="openFormModal()" class="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-lg font-medium transition shadow-sm sm:hidden">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex flex-col gap-6">
+        
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
+                <span class="text-slate-500 text-sm font-medium mb-1">Total Karya</span>
+                <span class="text-3xl font-bold text-slate-800" id="stat-total">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
+                <span class="text-slate-500 text-sm font-medium mb-1">Diterima</span>
+                <span class="text-3xl font-bold text-emerald-600" id="stat-received">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
+                <span class="text-slate-500 text-sm font-medium mb-1">Perlu Perbaikan</span>
+                <span class="text-3xl font-bold text-amber-500" id="stat-repair">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-center">
+                <span class="text-slate-500 text-sm font-medium mb-1">Diinstalasi</span>
+                <span class="text-3xl font-bold text-blue-600" id="stat-installed">0</span>
+            </div>
+        </div>
+
+        <!-- Controls: Search & Filter -->
+        <div id="controls-area" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full md:w-96">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="Cari nama seniman atau judul karya..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+            
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                <select id="filterCategory" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
+                    <option value="">Semua Kategori</option>
+                    <option value="Lukisan">Lukisan</option>
+                    <option value="Patung">Patung</option>
+                    <option value="Instalasi">Instalasi</option>
+                    <option value="Video Art">Video Art</option>
+                    <option value="Fotografi">Fotografi</option>
+                    <option value="Media Campuran">Media Campuran</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+                <select id="filterStatus" class="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm whitespace-nowrap min-w-max">
+                    <option value="">Semua Status</option>
+                    <option value="Menunggu">Menunggu</option>
+                    <option value="Diterima">Diterima</option>
+                    <option value="Diinstalasi">Diinstalasi</option>
+                    <option value="Dikembalikan">Dikembalikan</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-20">
+            <div class="loader mb-4"></div>
+            <p class="text-slate-500 font-medium">Memuat data karya...</p>
+        </div>
+
+        <!-- Empty State (Hidden by default) -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-100 border-dashed">
+            <i class="fa-solid fa-palette text-6xl text-slate-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-slate-700 mb-2">Belum ada karya</h3>
+            <p class="text-slate-500 mb-6 text-center max-w-md">Data checklist karya masih kosong atau tidak ditemukan hasil yang sesuai dengan filter Anda.</p>
+            <button onclick="openFormModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg font-medium transition">
+                Tambah Karya Pertama
+            </button>
+        </div>
+
+        <!-- Artwork Grid -->
+        <div id="artworkGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 hidden">
+            <!-- Cards will be injected here via JS -->
+        </div>
+
+    </main>
+    
+    </div> <!-- Akhir dari export-container -->
+
+    <!-- Form Modal (Add / Edit) -->
+    <div id="formModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4 transform scale-95 transition-transform duration-300" id="formModalContent">
+            
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
+                <h2 class="text-xl font-bold text-slate-800" id="modalTitle">Tambah Karya Baru</h2>
+                <button onclick="closeFormModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="artworkForm" class="p-6 flex flex-col gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Seniman -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Seniman <span class="text-red-500">*</span></label>
+                        <input type="text" id="inputArtist" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <!-- Judul -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Judul Karya <span class="text-red-500">*</span></label>
+                        <input type="text" id="inputTitle" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Kategori -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
+                        <select id="inputCategory" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                            <option value="Lukisan">Lukisan</option>
+                            <option value="Patung">Patung</option>
+                            <option value="Instalasi">Instalasi</option>
+                            <option value="Video Art">Video Art</option>
+                            <option value="Fotografi">Fotografi</option>
+                            <option value="Media Campuran">Media Campuran</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <!-- Jumlah -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Jumlah Item <span class="text-red-500">*</span></label>
+                        <input type="number" id="inputQuantity" min="1" value="1" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <!-- Dimensi -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Dimensi/Ukuran</label>
+                        <input type="text" id="inputDimensions" placeholder="P x L x T (cm)" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Kondisi -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Kondisi Fisik <span class="text-red-500">*</span></label>
+                        <select id="inputCondition" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                            <option value="Sangat Baik">Sangat Baik</option>
+                            <option value="Baik">Baik</option>
+                            <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+                            <option value="Rusak">Rusak</option>
+                        </select>
+                    </div>
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Status Logistik <span class="text-red-500">*</span></label>
+                        <select id="inputStatus" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+                            <option value="Menunggu">Menunggu kedatangan</option>
+                            <option value="Diterima">Sudah Diterima</option>
+                            <option value="Diinstalasi">Sedang/Sudah Diinstalasi</option>
+                            <option value="Dikembalikan">Dikembalikan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Foto Karya -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Foto Karya (Utuh)</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-lg hover:border-blue-500 transition relative overflow-hidden group" id="dropZone">
+                        <div class="space-y-1 text-center" id="uploadPlaceholder">
+                            <i class="fa-regular fa-image text-4xl text-slate-400 mb-2"></i>
+                            <div class="flex text-sm text-slate-600 justify-center">
+                                <label for="inputImage" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                    <span>Pilih gambar</span>
+                                    <input id="inputImage" type="file" accept="image/*" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-slate-500">PNG, JPG hingga 5MB (Otomatis dikompres)</p>
+                        </div>
+                        <!-- Preview Image in form -->
+                        <img id="formImagePreview" class="absolute inset-0 w-full h-full object-contain hidden bg-slate-100" />
+                        <button type="button" id="removeImgBtn" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full hidden flex items-center justify-center shadow hover:bg-red-600 z-10">
+                            <i class="fa-solid fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Keterangan Tambahan -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
+                    <textarea id="inputNotes" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4 flex gap-3 justify-end pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeFormModal()" class="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">Batal</button>
+                    <button type="submit" id="saveBtn" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Image Zoom Fullscreen Modal -->
+    <div id="zoomModal" class="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm hidden flex-col transition-opacity duration-300 opacity-0">
+        <!-- Top Toolbar -->
+        <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+            <div class="text-white">
+                <h3 id="zoomTitle" class="font-semibold text-lg drop-shadow-md">Judul Karya</h3>
+                <p id="zoomArtist" class="text-sm text-slate-300 drop-shadow-md">Nama Seniman</p>
+            </div>
+            <button onclick="closeZoomModal()" class="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition backdrop-blur">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Image Container for Pan & Zoom -->
+        <div class="flex-1 overflow-hidden relative flex items-center justify-center" id="zoomContainerWrapper">
+            <img id="zoom-image-container" src="" alt="Zoomed Artwork" draggable="false" class="max-w-none shadow-2xl">
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-slate-700 p-2 rounded-full shadow-2xl z-10">
+            <button onclick="handleZoomOut()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Zoom Out">
+                <i class="fa-solid fa-minus"></i>
+            </button>
+            <div class="px-3 text-white font-medium text-sm w-16 text-center" id="zoomLevelIndicator">100%</div>
+            <button onclick="handleZoomIn()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Zoom In">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+            <div class="w-px h-6 bg-slate-600 mx-1"></div>
+            <button onclick="resetZoom()" class="w-10 h-10 rounded-full hover:bg-slate-700 text-white flex items-center justify-center transition" title="Reset Zoom">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2"></div>
+
+    <!-- Logika Aplikasi -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variabel Global
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'jb-checklist-2026';
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch(e) { console.error("Firebase config parsing error", e); }
+        const customToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth, currentUser;
+        let artworksData = [];
+        let currentEditId = null;
+        let base64Image = null; // Menyimpan gambar yang diupload
+        
+        // Setup Firebase atau In-Memory Fallback
+        if (firebaseConfig) {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            initAuth();
+        } else {
+            showToast("Berjalan dalam mode Offline (Penyimpanan Sementara)", "warning");
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+
+        async function initAuth() {
+            try {
+                if (customToken) {
+                    await signInWithCustomToken(auth, customToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                currentUser = auth.currentUser;
+                setupRealtimeListener();
+            } catch (error) {
+                console.error("Gagal Autentikasi:", error);
+                showToast("Gagal terhubung ke server", "error");
+            }
+        }
+
+        function setupRealtimeListener() {
+            if (!currentUser) return;
+            
+            const artworksRef = collection(db, 'artifacts', appId, 'public', 'data', 'artworks');
+            const q = query(artworksRef);
+
+            onSnapshot(q, (snapshot) => {
+                artworksData = [];
+                snapshot.forEach((doc) => {
+                    artworksData.push({ id: doc.id, ...doc.data() });
+                });
+                renderArtworks();
+                updateStats();
+                document.getElementById('loadingState').classList.add('hidden');
+            }, (error) => {
+                console.error("Gagal mendengarkan data:", error);
+                showToast("Gagal memuat data. Coba lagi nanti.", "error");
+                document.getElementById('loadingState').classList.add('hidden');
+            });
+        }
+
+        // Menangani input file gambar
+        const imgInput = document.getElementById('inputImage');
+        const formImgPreview = document.getElementById('formImagePreview');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const removeImgBtn = document.getElementById('removeImgBtn');
+
+        imgInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                compressImage(file, 800, 800, 0.6).then(base64 => {
+                    base64Image = base64;
+                    showImagePreview(base64);
+                });
+            }
+        });
+
+        function showImagePreview(src) {
+            formImgPreview.src = src;
+            formImgPreview.classList.remove('hidden');
+            uploadPlaceholder.classList.add('hidden');
+            removeImgBtn.classList.remove('hidden');
+        }
+
+        function clearImagePreview() {
+            base64Image = null;
+            imgInput.value = '';
+            formImgPreview.src = '';
+            formImgPreview.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+            removeImgBtn.classList.add('hidden');
+        }
+
+        removeImgBtn.addEventListener('click', clearImagePreview);
+
+        // Fungsi Kompresi Gambar menggunakan Canvas
+        function compressImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = Math.round(height *= maxWidth / width);
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = Math.round(width *= maxHeight / height);
+                                height = maxHeight;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Konversi ke base64
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Modal Form Handling
+        window.openFormModal = function(editId = null) {
+            currentEditId = editId;
+            const modal = document.getElementById('formModal');
+            const form = document.getElementById('artworkForm');
+            const title = document.getElementById('modalTitle');
+            
+            clearImagePreview();
+            
+            if (editId) {
+                title.textContent = "Edit Data Karya";
+                const item = artworksData.find(a => a.id === editId);
+                if (item) {
+                    document.getElementById('inputArtist').value = item.artist;
+                    document.getElementById('inputTitle').value = item.title;
+                    document.getElementById('inputCategory').value = item.category;
+                    document.getElementById('inputQuantity').value = item.quantity;
+                    document.getElementById('inputDimensions').value = item.dimensions || '';
+                    document.getElementById('inputCondition').value = item.condition;
+                    document.getElementById('inputStatus').value = item.status;
+                    document.getElementById('inputNotes').value = item.notes || '';
+                    
+                    if (item.image) {
+                        base64Image = item.image;
+                        showImagePreview(item.image);
+                    }
+                }
+            } else {
+                title.textContent = "Tambah Karya Baru";
+                form.reset();
+                document.getElementById('inputQuantity').value = 1;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('formModalContent').classList.remove('scale-95');
+            }, 10);
+        }
+
+        window.closeFormModal = function() {
+            const modal = document.getElementById('formModal');
+            modal.classList.add('opacity-0');
+            document.getElementById('formModalContent').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Menyimpan Data
+        document.getElementById('artworkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!currentUser && db) {
+                showToast("Menunggu koneksi. Coba sebentar lagi.", "error");
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            const btnOriginalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+            btn.disabled = true;
+
+            const newArtwork = {
+                artist: document.getElementById('inputArtist').value.trim(),
+                title: document.getElementById('inputTitle').value.trim(),
+                category: document.getElementById('inputCategory').value,
+                quantity: parseInt(document.getElementById('inputQuantity').value) || 1,
+                dimensions: document.getElementById('inputDimensions').value.trim(),
+                condition: document.getElementById('inputCondition').value,
+                status: document.getElementById('inputStatus').value,
+                notes: document.getElementById('inputNotes').value.trim(),
+                image: base64Image,
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                if (db) {
+                    const idToSave = currentEditId || crypto.randomUUID();
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'artworks', idToSave);
+                    
+                    if (!currentEditId) {
+                        newArtwork.createdAt = new Date().toISOString();
+                    }
+                    
+                    await setDoc(docRef, newArtwork, { merge: true });
+                    showToast(currentEditId ? "Data diperbarui" : "Karya baru ditambahkan", "success");
+                } else {
+                    // Fallback In-memory (if db is somehow null)
+                    if (currentEditId) {
+                        const idx = artworksData.findIndex(a => a.id === currentEditId);
+                        if(idx > -1) artworksData[idx] = { ...artworksData[idx], ...newArtwork };
+                    } else {
+                        newArtwork.id = crypto.randomUUID();
+                        artworksData.push(newArtwork);
+                    }
+                    renderArtworks();
+                    updateStats();
+                }
+                closeFormModal();
+            } catch (error) {
+                console.error("Gagal menyimpan:", error);
+                showToast("Terjadi kesalahan saat menyimpan", "error");
+            } finally {
+                btn.innerHTML = btnOriginalHtml;
+                btn.disabled = false;
+            }
+        });
+
+        // Menghapus Data
+        window.deleteArtwork = async function(id) {
+            // Kita implementasi modal konfirmasi custom nanti, sementara kita asumsikan Ya jika dipanggil (berdasar aturan dilarang confirm, kita pakai form toast konfirmasi kustom)
+            // Karena tidak ada modal confirm yang dirancang dalam snippet ini, kita langsung hapus atau buat logic custom confirm
+            const artwork = artworksData.find(a => a.id === id);
+            if (!artwork) return;
+
+            // Membuat Custom Confirm UI sederhana via Toast khusus
+            createCustomConfirm(
+                `Hapus karya "${artwork.title}"?`,
+                async () => {
+                    if(db && currentUser) {
+                        try {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'artworks', id));
+                            showToast("Karya berhasil dihapus", "success");
+                        } catch (e) {
+                            showToast("Gagal menghapus", "error");
+                        }
+                    } else {
+                        artworksData = artworksData.filter(a => a.id !== id);
+                        renderArtworks();
+                        updateStats();
+                        showToast("Karya dihapus lokal", "success");
+                    }
+                }
+            );
+        }
+
+        // Render & Filter Logic
+        function renderArtworks() {
+            const grid = document.getElementById('artworkGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filterCat = document.getElementById('filterCategory').value;
+            const filterStat = document.getElementById('filterStatus').value;
+
+            grid.innerHTML = '';
+            
+            let filtered = artworksData.filter(item => {
+                const matchSearch = item.title.toLowerCase().includes(searchTerm) || item.artist.toLowerCase().includes(searchTerm);
+                const matchCat = filterCat === "" || item.category === filterCat;
+                const matchStat = filterStat === "" || item.status === filterStat;
+                return matchSearch && matchCat && matchStat;
+            });
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+                
+                filtered.forEach(item => {
+                    grid.appendChild(createCardElement(item));
+                });
+            }
+        }
+
+        // Event Listener untuk Search & Filter
+        document.getElementById('searchInput').addEventListener('input', renderArtworks);
+        document.getElementById('filterCategory').addEventListener('change', renderArtworks);
+        document.getElementById('filterStatus').addEventListener('change', renderArtworks);
+
+        // Helper untuk UI Kartu
+        function getConditionColor(condition) {
+            switch(condition) {
+                case 'Sangat Baik': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                case 'Baik': return 'bg-blue-100 text-blue-700 border-blue-200';
+                case 'Perlu Perbaikan': return 'bg-amber-100 text-amber-700 border-amber-200';
+                case 'Rusak': return 'bg-red-100 text-red-700 border-red-200';
+                default: return 'bg-slate-100 text-slate-700 border-slate-200';
+            }
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'Menunggu': return 'bg-slate-100 text-slate-600';
+                case 'Diterima': return 'bg-emerald-500 text-white shadow-emerald-200';
+                case 'Diinstalasi': return 'bg-blue-500 text-white shadow-blue-200';
+                case 'Dikembalikan': return 'bg-purple-500 text-white shadow-purple-200';
+                default: return 'bg-slate-200 text-slate-800';
+            }
+        }
+
+        function createCardElement(item) {
+            const div = document.createElement('div');
+            div.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group transition hover:shadow-md";
+            
+            // Image area
+            const imgArea = document.createElement('div');
+            imgArea.className = "h-56 w-full bg-slate-100 relative cursor-zoom-in overflow-hidden border-b border-slate-100";
+            
+            const imgUrl = item.image || `https://placehold.co/600x400/f1f5f9/64748b?text=Tidak+Ada+Foto\\n${item.category}`;
+            
+            imgArea.innerHTML = `
+                <img src="${imgUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition duration-300 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-full bg-white/90 text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 transform scale-75 group-hover:scale-100 shadow-lg">
+                        <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
+                    </div>
+                </div>
+                <div class="absolute top-3 right-3 ${getStatusColor(item.status)} px-3 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-sm">
+                    ${item.status}
+                </div>
+            `;
+            
+            imgArea.onclick = () => openZoomModal(imgUrl, item.title, item.artist);
+            div.appendChild(imgArea);
+
+            // Content area
+            const content = document.createElement('div');
+            content.className = "p-5 flex-1 flex flex-col";
+            content.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800 leading-tight mb-1">${item.title}</h3>
+                        <p class="text-sm font-medium text-blue-600">${item.artist}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                    <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium border border-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-layer-group opacity-60"></i> ${item.category}
+                    </span>
+                    <span class="px-2 py-1 rounded border font-medium flex items-center gap-1 ${getConditionColor(item.condition)}">
+                        <i class="fa-solid fa-heart-pulse opacity-60"></i> ${item.condition}
+                    </span>
+                    <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium border border-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-cubes opacity-60"></i> Qty: ${item.quantity}
+                    </span>
+                </div>
+                
+                ${item.dimensions ? `<p class="text-xs text-slate-500 mt-3 flex items-center gap-1"><i class="fa-solid fa-ruler-combined opacity-60"></i> ${item.dimensions}</p>` : ''}
+            `;
+            div.appendChild(content);
+
+            // Actions area
+            const actions = document.createElement('div');
+            actions.className = "px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center no-print export-hide";
+            actions.innerHTML = `
+                <div class="flex gap-2 w-full">
+                    <button onclick="openFormModal('${item.id}')" class="flex-1 py-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition flex items-center justify-center gap-2 border border-transparent hover:border-blue-100">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    <div class="w-px bg-slate-200 my-1"></div>
+                    <button onclick="deleteArtwork('${item.id}')" class="flex-1 py-1.5 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded transition flex items-center justify-center gap-2 border border-transparent hover:border-red-100">
+                        <i class="fa-solid fa-trash-can"></i> Hapus
+                    </button>
+                </div>
+            `;
+            div.appendChild(actions);
+
+            return div;
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').textContent = artworksData.length;
+            document.getElementById('stat-received').textContent = artworksData.filter(a => a.status === 'Diterima').length;
+            document.getElementById('stat-repair').textContent = artworksData.filter(a => a.condition === 'Rusak' || a.condition === 'Perlu Perbaikan').length;
+            document.getElementById('stat-installed').textContent = artworksData.filter(a => a.status === 'Diinstalasi').length;
+        }
+
+        // Logic Zoom Image Layar Penuh
+        const zoomModal = document.getElementById('zoomModal');
+        const zoomImg = document.getElementById('zoom-image-container');
+        const zoomLevelText = document.getElementById('zoomLevelIndicator');
+        
+        let zScale = 1;
+        let zTranslateX = 0;
+        let zTranslateY = 0;
+        let isDragging = false;
+        let startX, startY;
+        const scaleStep = 0.25;
+
+        window.openZoomModal = function(src, title, artist) {
+            zoomImg.src = src;
+            document.getElementById('zoomTitle').textContent = title;
+            document.getElementById('zoomArtist').textContent = artist;
+            
+            // Reset transform
+            resetZoomLogic();
+            
+            zoomModal.classList.remove('hidden');
+            setTimeout(() => { zoomModal.classList.remove('opacity-0'); }, 10);
+            document.body.style.overflow = 'hidden'; // Prevent body scroll
+        }
+
+        window.closeZoomModal = function() {
+            zoomModal.classList.add('opacity-0');
+            setTimeout(() => { 
+                zoomModal.classList.add('hidden'); 
+                zoomImg.src = '';
+            }, 300);
+            document.body.style.overflow = 'auto';
+        }
+
+        function applyZoomTransform() {
+            zoomImg.style.transform = `translate(${zTranslateX}px, ${zTranslateY}px) scale(${zScale})`;
+            zoomLevelText.textContent = `${Math.round(zScale * 100)}%`;
+        }
+
+        function resetZoomLogic() {
+            zScale = 1; zTranslateX = 0; zTranslateY = 0;
+            applyZoomTransform();
+        }
+        
+        window.resetZoom = resetZoomLogic;
+
+        window.handleZoomIn = function() {
+            if (zScale < 5) { zScale += scaleStep; applyZoomTransform(); }
+        }
+
+        window.handleZoomOut = function() {
+            if (zScale > 0.5) { zScale -= scaleStep; applyZoomTransform(); }
+        }
+
+        // Mouse Wheel Zoom
+        const zoomWrapper = document.getElementById('zoomContainerWrapper');
+        zoomWrapper.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0 && zScale < 5) {
+                zScale += scaleStep;
+            } else if (e.deltaY > 0 && zScale > 0.5) {
+                zScale -= scaleStep;
+            }
+            applyZoomTransform();
+        });
+
+        // Mouse Drag / Panning
+        zoomImg.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // cegah drag gambar default browser
+            isDragging = true;
+            startX = e.clientX - zTranslateX;
+            startY = e.clientY - zTranslateY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            zTranslateX = e.clientX - startX;
+            zTranslateY = e.clientY - startY;
+            applyZoomTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Sentuhan (Touch) untuk perangkat mobile (Panning sederhana)
+        let touchStartX, touchStartY;
+        zoomImg.addEventListener('touchstart', (e) => {
+            if(e.touches.length === 1) {
+                isDragging = true;
+                touchStartX = e.touches[0].clientX - zTranslateX;
+                touchStartY = e.touches[0].clientY - zTranslateY;
+            }
+        });
+        
+        zoomImg.addEventListener('touchmove', (e) => {
+            if(!isDragging || e.touches.length !== 1) return;
+            e.preventDefault();
+            zTranslateX = e.touches[0].clientX - touchStartX;
+            zTranslateY = e.touches[0].clientY - touchStartY;
+            applyZoomTransform();
+        });
+
+        zoomImg.addEventListener('touchend', () => { isDragging = false; });
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let color = 'bg-slate-800 text-white';
+            let icon = 'fa-info-circle';
+            
+            if (type === 'success') { color = 'bg-emerald-600 text-white'; icon = 'fa-check-circle'; }
+            else if (type === 'error') { color = 'bg-red-600 text-white'; icon = 'fa-exclamation-triangle'; }
+            else if (type === 'warning') { color = 'bg-amber-500 text-white'; icon = 'fa-exclamation-circle'; }
+
+            toast.className = `${color} px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 font-medium text-sm border border-black/10 max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Custom Confirm via Toast (sebagai pengganti alert/confirm browser bawaan)
+        function createCustomConfirm(message, onConfirm) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            toast.className = `bg-white px-4 py-4 rounded-xl shadow-2xl flex flex-col gap-3 transform translate-y-10 opacity-0 transition-all duration-300 border border-slate-200 pointer-events-auto max-w-sm`;
+            toast.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 mb-1">Konfirmasi</h4>
+                        <p class="text-sm text-slate-600">${message}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end mt-2">
+                    <button class="cancel-btn px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Batal</button>
+                    <button class="confirm-btn px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition">Ya, Hapus</button>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+
+            const removeToast = () => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            };
+
+            toast.querySelector('.cancel-btn').onclick = removeToast;
+            toast.querySelector('.confirm-btn').onclick = () => {
+                onConfirm();
+                removeToast();
+            };
+        }
+
+        window.exportPrint = function() {
+            window.print();
+        };
+
+        window.exportJPG = async function() {
+            if (artworksData.length === 0) {
+                showToast("Tidak ada data untuk diekspor", "warning");
+                return;
+            }
+            
+            showToast("Menyiapkan gambar. Mohon tunggu...", "info");
+            
+            // Menyembunyikan elemen UI (seperti form pencarian dan tombol aksi) dari JPG
+            const elementsToHide = document.querySelectorAll('.export-hide, #controls-area');
+            elementsToHide.forEach(el => el.style.display = 'none');
+            
+            // Menargetkan wrapper 'export-container' agar mencakup Header Jakarta Biennale
+            const elementToCapture = document.getElementById('export-container');
+            
+            try {
+                const canvas = await html2canvas(elementToCapture, {
+                    scale: 2, // Resolusi tinggi agar teks tidak pecah
+                    useCORS: true, 
+                    backgroundColor: '#f8fafc' // Samakan dengan background aplikasi
+                });
+                
+                const link = document.createElement('a');
+                link.download = 'Jakarta_Biennale_2026_Checklist.jpg';
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+                
+                showToast("Berhasil mengekspor layout menjadi JPG", "success");
+            } catch (err) {
+                console.error("Gagal export JPG:", err);
+                showToast("Terjadi kesalahan saat mengekspor gambar", "error");
+            } finally {
+                // Mengembalikan tampilan elemen UI yang disembunyikan
+                elementsToHide.forEach(el => el.style.display = '');
+            }
+        };
+
+        window.exportExcel = function() {
+            if (artworksData.length === 0) {
+                showToast("Tidak ada data untuk diekspor", "warning");
+                return;
+            }
+            
+            showToast("Menyiapkan file Excel beserta gambar...", "info");
+            
+            // Membuat template HTML table untuk diekspor sebagai .xls
+            // Ini memungkinkan base64 image dan warna UI dirender oleh Excel
+            let tableHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    table { border-collapse: collapse; width: 100%; font-family: sans-serif; }
+                    th { background-color: #0f172a; color: #ffffff; padding: 12px; font-size: 14px; text-align: left; border: 1px solid #cbd5e1; }
+                    td { padding: 10px; border: 1px solid #cbd5e1; vertical-align: top; font-size: 13px; color: #334155; }
+                    .img-cell { width: 140px; text-align: center; vertical-align: middle; }
+                    img { max-width: 120px; max-height: 120px; object-fit: cover; border-radius: 4px; }
+                    h2 { color: #0f172a; margin-bottom: 5px; }
+                    h4 { color: #3b82f6; margin-top: 0; margin-bottom: 20px; font-style: italic; }
+                </style>
+            </head>
+            <body>
+                <h2>Jakarta Biennale 2026</h2>
+                <h4>'KEBAL' - Checklist Karya Seniman</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Foto Karya</th>
+                            <th>Seniman & Judul</th>
+                            <th>Detail (Kategori, Qty, Dimensi)</th>
+                            <th>Kondisi Fisik</th>
+                            <th>Status Logistik</th>
+                            <th>Catatan Tambahan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            artworksData.forEach((item, index) => {
+                const imgTag = item.image ? `<img src="${item.image}">` : '<i>Tidak ada foto</i>';
+                
+                tableHtml += `
+                    <tr>
+                        <td style="text-align: center; vertical-align: middle;">${index + 1}</td>
+                        <td class="img-cell">${imgTag}</td>
+                        <td>
+                            <strong style="font-size: 15px; color: #0f172a;">${item.title}</strong><br>
+                            <span style="color: #3b82f6;">${item.artist}</span>
+                        </td>
+                        <td>
+                            Kategori: <strong>${item.category}</strong><br>
+                            Jumlah: ${item.quantity}<br>
+                            Dimensi: ${item.dimensions || '-'}
+                        </td>
+                        <td>${item.condition}</td>
+                        <td>${item.status}</td>
+                        <td>${item.notes || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                    </tbody>
+                </table>
+            </body>
+            </html>
+            `;
+
+            try {
+                const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'Checklist_JB_2026_dengan_Foto.xls';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast("Berhasil mengekspor ke dokumen Excel", "success");
+            } catch (err) {
+                console.error("Gagal export Excel:", err);
+                showToast("Terjadi kesalahan saat mengekspor Excel", "error");
+            }
+        };
+
+    </script>
+</body>
+</html>
