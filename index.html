@@ -92,7 +92,7 @@
              margin: 0 auto;
         }
 
-        /* Custom Toast Animation */
+        /* Custom Toast and Modal Animations */
         @keyframes fade-in-up {
             0% { opacity: 0; transform: translateY(10px); }
             100% { opacity: 1; transform: translateY(0); }
@@ -100,23 +100,37 @@
         .animate-fade-in-up {
             animation: fade-in-up 0.3s ease-out forwards;
         }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s infinite;
+        }
     </style>
 </head>
 <body class="text-slate-800 pb-20">
 
     <!-- Action Toolbar (Fixed Top) -->
     <div class="action-bar fixed top-0 left-0 w-full bg-slate-900 text-white shadow-xl p-3 flex flex-wrap gap-2 sm:gap-4 justify-center z-40 no-print items-center">
-        <div class="font-bold text-lg mr-2 sm:mr-4 text-emerald-400 hidden md:block">
+        <div class="font-bold text-lg mr-2 sm:mr-4 text-emerald-400 hidden lg:block">
             <i class="fas fa-leaf mr-2"></i>Rimpang Tools
         </div>
         <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
-            <i class="fas fa-print mr-2"></i> Ekspor Print (PDF)
+            <i class="fas fa-print mr-2"></i> Ekspor PDF
         </button>
         <button onclick="exportToJPG()" id="btn-jpg" class="bg-purple-600 hover:bg-purple-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
             <i class="fas fa-image mr-2"></i> Ekspor JPG
         </button>
         <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm">
             <i class="fas fa-file-excel mr-2"></i> Ekspor CSV
+        </button>
+        <!-- Tombol Pengaturan Alarm Baru -->
+        <button onclick="openAlarmSettings()" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm relative">
+            <i class="fas fa-bell mr-2"></i> Alarm
+            <span id="alarm-indicator" class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full hidden border-2 border-slate-900"></span>
         </button>
         <button onclick="reqResetData()" class="bg-red-600 hover:bg-red-500 px-3 sm:px-4 py-2 rounded-md font-medium flex items-center transition-colors text-sm sm:text-base shadow-sm md:ml-auto">
             <i class="fas fa-sync-alt mr-2"></i> Reset Template
@@ -135,6 +149,47 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 no-print"></div>
 
     <script>
+        // Custom UI components to replace native window alerts and confirms
+        function showCustomConfirm(message, onConfirm) {
+            const modalId = 'modal-' + Date.now();
+            const modalHtml = `
+            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 bg-opacity-60 no-print animate-fade-in-up">
+                <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+                    <div class="flex items-center text-red-600 mb-4">
+                        <i class="fas fa-exclamation-triangle text-2xl mr-3"></i>
+                        <h4 class="text-xl font-bold text-slate-800">Konfirmasi</h4>
+                    </div>
+                    <p class="mb-8 text-slate-600">${message}</p>
+                    <div class="flex justify-end gap-3">
+                        <button id="cancel-${modalId}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md text-slate-800 font-medium transition-colors">Batal</button>
+                        <button id="confirm-${modalId}" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium transition-colors shadow-sm">Ya, Lanjutkan</button>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById(`cancel-${modalId}`).onclick = () => {
+                document.getElementById(modalId).remove();
+            };
+            document.getElementById(`confirm-${modalId}`).onclick = () => {
+                onConfirm();
+                document.getElementById(modalId).remove();
+            };
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded shadow-lg text-white font-medium animate-fade-in-up ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-times-circle' : 'fa-check-circle'} mr-2"></i> ${message}`;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // Default Template matching the 3D model reference
         function generateRow(desc = "Pekerjaan baru...", qty = "1", note = "") {
             return `
@@ -155,7 +210,6 @@
         }
 
         function generateImageBlock(categoryId) {
-            // Ditambahkan dukungan ekstensi khusus untuk HEIC dan HEIF di input accept attr
             return `
             <div class="image-container p-4 bg-slate-50 border-x border-slate-300 relative text-center flex flex-col items-center justify-center min-h-[100px]">
                 <input type="file" class="hidden image-upload-input" accept="image/*,.heic,.heif" data-cat="${categoryId}">
@@ -338,47 +392,6 @@
 
         const mainContainer = document.getElementById('export-area');
         
-        // Custom UI components to replace native window alerts and confirms
-        function showCustomConfirm(message, onConfirm) {
-            const modalId = 'modal-' + Date.now();
-            const modalHtml = `
-            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 bg-opacity-60 no-print animate-fade-in-up">
-                <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-                    <div class="flex items-center text-red-600 mb-4">
-                        <i class="fas fa-exclamation-triangle text-2xl mr-3"></i>
-                        <h4 class="text-xl font-bold text-slate-800">Konfirmasi</h4>
-                    </div>
-                    <p class="mb-8 text-slate-600">${message}</p>
-                    <div class="flex justify-end gap-3">
-                        <button id="cancel-${modalId}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md text-slate-800 font-medium transition-colors">Batal</button>
-                        <button id="confirm-${modalId}" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium transition-colors shadow-sm">Ya, Lanjutkan</button>
-                    </div>
-                </div>
-            </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById(`cancel-${modalId}`).onclick = () => {
-                document.getElementById(modalId).remove();
-            };
-            document.getElementById(`confirm-${modalId}`).onclick = () => {
-                onConfirm();
-                document.getElementById(modalId).remove();
-            };
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded shadow-lg text-white font-medium animate-fade-in-up ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-times-circle' : 'fa-check-circle'} mr-2"></i> ${message}`;
-            
-            document.getElementById('toast-container').appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
         function initApp() {
             const savedData = localStorage.getItem('rimpang-checklist-data');
             if (savedData) {
@@ -390,6 +403,8 @@
             } else {
                 mainContainer.innerHTML = defaultHTML;
             }
+            // Inisialisasi logic sistem Alarm
+            initAlarmSystem();
         }
         
         let saveTimeout;
@@ -400,7 +415,189 @@
             }, 500);
         }
 
-        // Now works seamlessly with Files and Blobs (after HEIC conversion)
+        let alarmCheckTimer;
+        let audioCtx; // Diinisialisasi nanti karena interaksi user
+        
+        function initAlarmSystem() {
+            updateAlarmIndicator();
+            if(alarmCheckTimer) clearInterval(alarmCheckTimer);
+            // Mengecek status alarm setiap 10 detik
+            alarmCheckTimer = setInterval(checkIfTimeToAlert, 10000); 
+        }
+
+        function unlockAudio() {
+            // Trick untuk bypass browser audio autoplary policy saat user klik
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function updateAlarmIndicator() {
+            const isEnabled = localStorage.getItem('rimpang-alarm-enabled') === 'true';
+            const indicator = document.getElementById('alarm-indicator');
+            if (isEnabled) {
+                indicator.classList.remove('hidden');
+                indicator.classList.add('block');
+            } else {
+                indicator.classList.add('hidden');
+                indicator.classList.remove('block');
+            }
+        }
+
+        function openAlarmSettings() {
+            unlockAudio(); // Unlock audio context when user interacts
+            const modalId = 'alarm-modal-' + Date.now();
+            let currentInterval = localStorage.getItem('rimpang-alarm-interval') || 3;
+            let isEnabled = localStorage.getItem('rimpang-alarm-enabled') === 'true';
+
+            const modalHtml = `
+            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 bg-opacity-60 no-print animate-fade-in-up">
+                <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+                    <div class="flex items-center text-amber-600 mb-4">
+                        <i class="fas fa-clock text-2xl mr-3"></i>
+                        <h4 class="text-xl font-bold text-slate-800">Pengaturan Alarm Progress</h4>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-6">Alarm ini akan membunyikan nada dan pop-up untuk mengingatkan Anda mengupdate checklist secara berkala.</p>
+                    
+                    <div class="mb-4 flex items-center justify-between bg-slate-50 p-3 rounded-md border border-slate-200">
+                        <div class="text-slate-700 font-semibold">Status Alarm</div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="alarm-toggle-input" class="sr-only peer" ${isEnabled ? 'checked' : ''}>
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Ingatkan saya setiap (Jam):</label>
+                        <input type="number" id="alarm-interval-input" value="${currentInterval}" min="0.01" step="0.1" class="w-full border border-slate-300 rounded-md px-3 py-2 text-slate-700 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors">
+                        <p class="text-xs text-slate-500 mt-2"><b>Tips:</b> Ketik <b>3</b> untuk 3 jam. Anda juga bisa mengisi desimal (misal <b>0.1</b> = 6 menit) untuk tes.</p>
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <button id="cancel-${modalId}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-md text-slate-800 font-medium transition-colors">Batal</button>
+                        <button id="save-${modalId}" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-md text-white font-medium transition-colors shadow-sm">Simpan</button>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            document.getElementById(`cancel-${modalId}`).onclick = () => {
+                document.getElementById(modalId).remove();
+            };
+
+            document.getElementById(`save-${modalId}`).onclick = () => {
+                const toggleVal = document.getElementById('alarm-toggle-input').checked;
+                const intervalVal = parseFloat(document.getElementById('alarm-interval-input').value) || 3;
+                
+                // Jika interval nilainya negatif atau 0 paksa ke default minimal
+                const finalInterval = intervalVal <= 0 ? 3 : intervalVal;
+
+                const wasEnabled = localStorage.getItem('rimpang-alarm-enabled') === 'true';
+
+                localStorage.setItem('rimpang-alarm-enabled', toggleVal);
+                localStorage.setItem('rimpang-alarm-interval', finalInterval);
+
+                if (toggleVal) {
+                    // Set waktu notifikasi berikutnya berdasarkan sekarang + interval
+                    const nextTime = Date.now() + (finalInterval * 60 * 60 * 1000); // jam ke ms
+                    localStorage.setItem('rimpang-alarm-next-time', nextTime);
+                    
+                    // Request browser notification API permission if possible
+                    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                        Notification.requestPermission();
+                    }
+                    showToast(`Alarm diaktifkan! Akan berbunyi dalam ${finalInterval} jam.`);
+                } else if (wasEnabled && !toggleVal) {
+                    showToast("Alarm berhasil dinonaktifkan.");
+                }
+
+                updateAlarmIndicator();
+                document.getElementById(modalId).remove();
+            };
+        }
+
+        function checkIfTimeToAlert() {
+            const isEnabled = localStorage.getItem('rimpang-alarm-enabled') === 'true';
+            if (!isEnabled) return;
+
+            const nextTimeStr = localStorage.getItem('rimpang-alarm-next-time');
+            if (!nextTimeStr) return;
+
+            const nextTime = parseInt(nextTimeStr);
+            if (Date.now() >= nextTime) {
+                // Saatnya Alarm Bunyi!
+                triggerAlarmAction();
+
+                // Reset timer untuk putaran selanjutnya berdasarkan interval
+                const intervalVal = parseFloat(localStorage.getItem('rimpang-alarm-interval')) || 3;
+                const newNextTime = Date.now() + (intervalVal * 60 * 60 * 1000);
+                localStorage.setItem('rimpang-alarm-next-time', newNextTime);
+            }
+        }
+
+        function triggerAlarmAction() {
+            playBeepSound();
+
+            const modalId = 'alarm-trigger-' + Date.now();
+            const modalHtml = `
+            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 bg-opacity-80 no-print animate-fade-in-up">
+                <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center border-4 border-amber-400">
+                    <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-amber-100 mb-6 animate-pulse-ring">
+                        <i class="fas fa-bell text-4xl text-amber-500 animate-bounce"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Waktunya Update!</h2>
+                    <p class="text-slate-600 mb-8">Ini adalah pengingat rutin Anda untuk mengupdate progres/checklist pekerjaan hari ini.</p>
+                    <button id="ok-${modalId}" class="w-full px-4 py-3 bg-slate-800 hover:bg-slate-900 rounded-lg text-white font-bold text-lg transition-colors shadow-lg">
+                        Oke, Saya Cek Sekarang!
+                    </button>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            document.getElementById(`ok-${modalId}`).onclick = () => {
+                document.getElementById(modalId).remove();
+            };
+
+            // Trigger OS level notification if permitted
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Rimpang Digital - Alarm Progress", {
+                    body: "Waktunya update progress checklist pekerjaan Anda saat ini!",
+                    icon: "https://cdn-icons-png.flaticon.com/512/825/825590.png"
+                });
+            }
+        }
+
+        function playBeepSound() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const playNote = (time, freq, dur) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.3, time);
+                    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+                    osc.start(time);
+                    osc.stop(time + dur);
+                };
+
+                // Suara beruntun 3 kali (Ting! Ting! Ting!)
+                const t = audioCtx.currentTime;
+                playNote(t, 880, 0.3);       // A5
+                playNote(t + 0.4, 880, 0.3); // A5
+                playNote(t + 0.8, 1046.5, 0.5); // C6
+            } catch (e) {
+                console.warn("Audio tidak dapat dimainkan di browser ini.");
+            }
+        }
+
         function compressImage(fileOrBlob, callback) {
             const reader = new FileReader();
             reader.readAsDataURL(fileOrBlob);
@@ -677,6 +874,9 @@
                 "PERINGATAN: Anda yakin ingin menghapus SEMUA data yang sudah diedit (termasuk gambar) dan mengembalikannya ke template awal?",
                 () => {
                     localStorage.removeItem('rimpang-checklist-data');
+                    localStorage.removeItem('rimpang-alarm-enabled');
+                    localStorage.removeItem('rimpang-alarm-interval');
+                    localStorage.removeItem('rimpang-alarm-next-time');
                     location.reload();
                 }
             );
