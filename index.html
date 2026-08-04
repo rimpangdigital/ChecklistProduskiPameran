@@ -59,7 +59,7 @@
             .bg-white { border: 1px solid #e2e8f0 !important; box-shadow: none !important; page-break-inside: avoid; }
             #artworkGrid { display: grid !important; }
             #loadingState, #emptyState { display: none !important; }
-            .h-56 { height: 180px !important; } /* Mengubah tinggi foto saat di-print */
+            .h-56 { height: 180px !important; }
         }
     </style>
 </head>
@@ -77,7 +77,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold leading-tight">Checklist Produksi Pameran</h1>
-                    <p class="text-xs text-blue-300 font-medium tracking-wider">Rimpang Digital Kraetif</p>
+                    <p class="text-xs text-blue-300 font-medium tracking-wider">Data offline setiap device komputer/smartphone berbeda</p>
                 </div>
             </div>
             
@@ -338,29 +338,82 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variabel Global
+        // Variabel Global & Konfigurasi
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'jb-checklist-2026';
-        let firebaseConfig;
+        let firebaseConfig = null;
+        let customToken = null;
+
+        // Mengecek ketersediaan konfigurasi Firebase (Aman jika diupload ke GitHub)
         try {
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        } catch(e) { console.error("Firebase config parsing error", e); }
-        const customToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+            if (typeof __initial_auth_token !== 'undefined') {
+                customToken = __initial_auth_token;
+            }
+        } catch (e) { 
+            console.warn("Menjalankan versi lokal tanpa Firebase."); 
+        }
 
         let db, auth, currentUser;
         let artworksData = [];
         let currentEditId = null;
         let base64Image = null; // Menyimpan gambar yang diupload
         
-        // Setup Firebase atau In-Memory Fallback
-        if (firebaseConfig) {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            initAuth();
+        // Konstanta Nama Local Storage
+        const LOCAL_STORAGE_KEY = 'jb2026_artworks_data';
+
+        // Helper untuk menghasilkan ID Unik
+        function generateUniqueId() {
+            return typeof crypto !== 'undefined' && crypto.randomUUID 
+                ? crypto.randomUUID() 
+                : 'id-' + Math.random().toString(36).substring(2, 9) + Date.now();
+        }
+
+        // Fungsi Simpan ke Local Storage (Pencegah Data Hilang Saat Refresh)
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(artworksData));
+            } catch (e) {
+                console.error("Gagal menyimpan ke LocalStorage (Mungkin kuota penuh):", e);
+                showToast("Peringatan: Gagal menyimpan gambar ke penyimpanan lokal. Ukuran terlalu besar.", "warning");
+            }
+        }
+
+        // Fungsi Muat dari Local Storage
+        function loadFromLocalStorage() {
+            const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedData) {
+                try {
+                    artworksData = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("Data LocalStorage korup, mereset data lokal.");
+                    artworksData = [];
+                }
+            }
+            renderArtworks();
+            updateStats();
+        }
+
+        // Inisialisasi Aplikasi (Firebase atau Offline/Local Storage)
+        if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                initAuth();
+            } catch (err) {
+                console.error("Error inisialisasi Firebase", err);
+                initOfflineMode();
+            }
         } else {
-            showToast("Berjalan dalam mode Offline (Penyimpanan Sementara)", "warning");
+            initOfflineMode();
+        }
+
+        function initOfflineMode() {
+            showToast("Mode Offline Aktif. Data tersimpan aman di browser Anda.", "info");
             document.getElementById('loadingState').classList.add('hidden');
-            document.getElementById('emptyState').classList.remove('hidden');
+            loadFromLocalStorage(); // Memuat data yang tersimpan agar tidak hilang saat refresh
         }
 
         async function initAuth() {
@@ -373,8 +426,9 @@
                 currentUser = auth.currentUser;
                 setupRealtimeListener();
             } catch (error) {
-                console.error("Gagal Autentikasi:", error);
-                showToast("Gagal terhubung ke server", "error");
+                console.error("Gagal Autentikasi Firebase:", error);
+                showToast("Menggunakan penyimpanan lokal.", "warning");
+                initOfflineMode();
             }
         }
 
@@ -389,13 +443,17 @@
                 snapshot.forEach((doc) => {
                     artworksData.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // Backup sinkronisasi Firebase ke Local Storage
+                saveToLocalStorage();
+                
                 renderArtworks();
                 updateStats();
                 document.getElementById('loadingState').classList.add('hidden');
             }, (error) => {
-                console.error("Gagal mendengarkan data:", error);
-                showToast("Gagal memuat data. Coba lagi nanti.", "error");
-                document.getElementById('loadingState').classList.add('hidden');
+                console.error("Gagal mendengarkan data dari server:", error);
+                showToast("Gagal sinkronisasi. Memuat data lokal...", "error");
+                initOfflineMode();
             });
         }
 
@@ -408,9 +466,12 @@
         imgInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                compressImage(file, 800, 800, 0.6).then(base64 => {
+                // Kompresi ketat untuk menghemat kuota memori/LocalStorage
+                compressImage(file, 600, 600, 0.7).then(base64 => {
                     base64Image = base64;
                     showImagePreview(base64);
+                }).catch(err => {
+                    showToast("Gagal memproses gambar", "error");
                 });
             }
         });
@@ -463,9 +524,9 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Konversi ke base64
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
+                    img.onerror = () => reject(new Error("Gagal meload gambar untuk dikompresi"));
                 };
                 reader.onerror = error => reject(error);
             });
@@ -523,11 +584,6 @@
         // Menyimpan Data
         document.getElementById('artworkForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            if (!currentUser && db) {
-                showToast("Menunggu koneksi. Coba sebentar lagi.", "error");
-                return;
-            }
 
             const btn = document.getElementById('saveBtn');
             const btnOriginalHtml = btn.innerHTML;
@@ -548,28 +604,33 @@
             };
 
             try {
-                if (db) {
-                    const idToSave = currentEditId || crypto.randomUUID();
+                const idToSave = currentEditId || generateUniqueId();
+                
+                if (!currentEditId) {
+                    newArtwork.createdAt = new Date().toISOString();
+                }
+
+                // Coba simpan ke Firebase jika aktif
+                if (db && currentUser) {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'artworks', idToSave);
-                    
-                    if (!currentEditId) {
-                        newArtwork.createdAt = new Date().toISOString();
-                    }
-                    
                     await setDoc(docRef, newArtwork, { merge: true });
-                    showToast(currentEditId ? "Data diperbarui" : "Karya baru ditambahkan", "success");
+                    showToast(currentEditId ? "Data diperbarui di server" : "Karya baru ditambahkan", "success");
                 } else {
-                    // Fallback In-memory (if db is somehow null)
+                    // Fallback In-memory / LocalStorage Murni (Penting untuk GitHub Pages)
+                    newArtwork.id = idToSave;
                     if (currentEditId) {
                         const idx = artworksData.findIndex(a => a.id === currentEditId);
                         if(idx > -1) artworksData[idx] = { ...artworksData[idx], ...newArtwork };
                     } else {
-                        newArtwork.id = crypto.randomUUID();
                         artworksData.push(newArtwork);
                     }
+                    
+                    saveToLocalStorage(); // Wajib: Simpan ke local storage agar tidak hilang saat di-refresh
                     renderArtworks();
                     updateStats();
+                    showToast(currentEditId ? "Data lokal diperbarui" : "Karya lokal ditambahkan", "success");
                 }
+                
                 closeFormModal();
             } catch (error) {
                 console.error("Gagal menyimpan:", error);
@@ -582,27 +643,26 @@
 
         // Menghapus Data
         window.deleteArtwork = async function(id) {
-            // Kita implementasi modal konfirmasi custom nanti, sementara kita asumsikan Ya jika dipanggil (berdasar aturan dilarang confirm, kita pakai form toast konfirmasi kustom)
-            // Karena tidak ada modal confirm yang dirancang dalam snippet ini, kita langsung hapus atau buat logic custom confirm
             const artwork = artworksData.find(a => a.id === id);
             if (!artwork) return;
 
-            // Membuat Custom Confirm UI sederhana via Toast khusus
             createCustomConfirm(
                 `Hapus karya "${artwork.title}"?`,
                 async () => {
-                    if(db && currentUser) {
+                    if (db && currentUser) {
                         try {
                             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'artworks', id));
-                            showToast("Karya berhasil dihapus", "success");
+                            showToast("Karya berhasil dihapus dari server", "success");
                         } catch (e) {
-                            showToast("Gagal menghapus", "error");
+                            showToast("Gagal menghapus dari server", "error");
                         }
                     } else {
+                        // Penghapusan Lokal
                         artworksData = artworksData.filter(a => a.id !== id);
+                        saveToLocalStorage(); // Update ke storage browser
                         renderArtworks();
                         updateStats();
-                        showToast("Karya dihapus lokal", "success");
+                        showToast("Karya dihapus secara lokal", "success");
                     }
                 }
             );
@@ -760,12 +820,11 @@
             document.getElementById('zoomTitle').textContent = title;
             document.getElementById('zoomArtist').textContent = artist;
             
-            // Reset transform
             resetZoomLogic();
             
             zoomModal.classList.remove('hidden');
             setTimeout(() => { zoomModal.classList.remove('opacity-0'); }, 10);
-            document.body.style.overflow = 'hidden'; // Prevent body scroll
+            document.body.style.overflow = 'hidden'; 
         }
 
         window.closeZoomModal = function() {
@@ -811,7 +870,7 @@
 
         // Mouse Drag / Panning
         zoomImg.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // cegah drag gambar default browser
+            e.preventDefault(); 
             isDragging = true;
             startX = e.clientX - zTranslateX;
             startY = e.clientY - zTranslateY;
@@ -828,7 +887,7 @@
             isDragging = false;
         });
 
-        // Sentuhan (Touch) untuk perangkat mobile (Panning sederhana)
+        // Touch Panning
         let touchStartX, touchStartY;
         zoomImg.addEventListener('touchstart', (e) => {
             if(e.touches.length === 1) {
@@ -865,19 +924,17 @@
             
             container.appendChild(toast);
             
-            // Animate in
             setTimeout(() => {
                 toast.classList.remove('translate-y-10', 'opacity-0');
             }, 10);
 
-            // Remove after 3s
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Custom Confirm via Toast (sebagai pengganti alert/confirm browser bawaan)
+        // Custom Confirm via Toast
         function createCustomConfirm(message, onConfirm) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -927,18 +984,16 @@
             
             showToast("Menyiapkan gambar. Mohon tunggu...", "info");
             
-            // Menyembunyikan elemen UI (seperti form pencarian dan tombol aksi) dari JPG
             const elementsToHide = document.querySelectorAll('.export-hide, #controls-area');
             elementsToHide.forEach(el => el.style.display = 'none');
             
-            // Menargetkan wrapper 'export-container' agar mencakup Header Jakarta Biennale
             const elementToCapture = document.getElementById('export-container');
             
             try {
                 const canvas = await html2canvas(elementToCapture, {
-                    scale: 2, // Resolusi tinggi agar teks tidak pecah
+                    scale: 2, 
                     useCORS: true, 
-                    backgroundColor: '#f8fafc' // Samakan dengan background aplikasi
+                    backgroundColor: '#f8fafc' 
                 });
                 
                 const link = document.createElement('a');
@@ -951,7 +1006,6 @@
                 console.error("Gagal export JPG:", err);
                 showToast("Terjadi kesalahan saat mengekspor gambar", "error");
             } finally {
-                // Mengembalikan tampilan elemen UI yang disembunyikan
                 elementsToHide.forEach(el => el.style.display = '');
             }
         };
@@ -964,8 +1018,6 @@
             
             showToast("Menyiapkan file Excel beserta gambar...", "info");
             
-            // Membuat template HTML table untuk diekspor sebagai .xls
-            // Ini memungkinkan base64 image dan warna UI dirender oleh Excel
             let tableHtml = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
